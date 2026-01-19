@@ -1,0 +1,7 @@
+-r base.txt
+django-debug-toolbar>=4.2,<4.3
+ipython>=8.18,<8.19
+pytest>=7.4,<7.5
+pytest-django>=4.7,<4.8
+ruff>=0.1.8,<0.2
+black>=23.12,<24
