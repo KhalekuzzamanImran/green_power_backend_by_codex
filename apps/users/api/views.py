@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError as DjangoValidationError
 from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.throttling import ScopedRateThrottle
@@ -10,8 +9,6 @@ from apps.users.api.serializers import (
     TokenPairSerializer,
     TokenRefreshSerializer,
     TokenLogoutSerializer,
-    UserRegistrationSerializer,
-    UserSerializer,
 )
 from apps.users.services.auth_service import (
     authenticate_user,
@@ -19,8 +16,6 @@ from apps.users.services.auth_service import (
     issue_tokens_for_user,
     refresh_tokens,
 )
-from apps.users.services.user_service import register_user
-from common.exceptions import UserAlreadyExistsError
 from common.redis_client import get_async_redis
 
 
@@ -41,23 +36,6 @@ class AsyncRedisHealthView(APIView):
     async def get(self, request, *args, **kwargs):
         pong = await get_async_redis().ping()
         return Response({"redis": bool(pong)})
-
-
-class UserRegistrationView(APIView):
-    authentication_classes = []
-    permission_classes = []
-
-    @extend_schema(request=UserRegistrationSerializer, responses={201: UserSerializer})
-    def post(self, request, *args, **kwargs):
-        serializer = UserRegistrationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            user = register_user(**serializer.validated_data)
-        except UserAlreadyExistsError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
-        except DjangoValidationError as exc:
-            raise ValidationError({"password": exc.messages}) from exc
-        return Response(UserSerializer(user).data, status=201)
 
 
 class TokenObtainView(APIView):

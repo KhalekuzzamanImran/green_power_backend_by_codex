@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, []),
-    DATABASE_URL=(str, "sqlite:///" + str(BASE_DIR / "db.sqlite3")),
+    DATABASE_URL=(str, ""),
     POSTGRES_DB_NAME=(str, ""),
     POSTGRES_DB_USER=(str, ""),
     POSTGRES_DB_PASSWORD=(str, ""),
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "apps.users",
+    "apps.service_zones",
 ]
 
 MIDDLEWARE = [
@@ -91,7 +92,10 @@ if not database_url and env.str("POSTGRES_DB_HOST"):
         f"/{env.str('POSTGRES_DB_NAME')}"
     )
 if not database_url:
-    raise RuntimeError("DATABASE_URL or POSTGRES_DB_* must be configured")
+    if DEBUG or ENVIRONMENT == "test":
+        database_url = "sqlite:///" + str(BASE_DIR / "db.sqlite3")
+    else:
+        raise RuntimeError("DATABASE_URL or POSTGRES_DB_* must be configured")
 
 DATABASES = {"default": env.db_url("DATABASE_URL", default=database_url)}
 

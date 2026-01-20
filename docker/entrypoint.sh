@@ -1,18 +1,22 @@
 #!/bin/sh
 set -eu
 
-echo "Running migrations..."
-python manage.py makemigrations
+echo "Checking migrations..."
 
 max_tries=30
 try=1
 while [ "$try" -le "$max_tries" ]; do
-    if python manage.py migrate --noinput; then
+    if python manage.py showmigrations --plan | grep -q '\[ \]'; then
+        if python manage.py migrate --noinput; then
+            break
+        fi
+        echo "Migrate failed (attempt $try/$max_tries); retrying in 2s..."
+        try=$((try + 1))
+        sleep 2
+    else
+        echo "No pending migrations."
         break
     fi
-    echo "Migrate failed (attempt $try/$max_tries); retrying in 2s..."
-    try=$((try + 1))
-    sleep 2
 done
 
 if [ "$try" -gt "$max_tries" ]; then

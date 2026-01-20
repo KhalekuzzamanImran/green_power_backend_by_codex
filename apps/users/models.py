@@ -1,8 +1,9 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
+from common.models import AuditModel
 
-class Role(models.Model):
+class Role(AuditModel):
     key = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100, unique=True)
 
@@ -41,7 +42,7 @@ class CustomUserManager(UserManager):
         return super().create_superuser(username, email=email, password=password, **extra_fields)
 
 
-class User(AbstractUser):
+class User(AbstractUser, AuditModel):
     email = models.EmailField(unique=True, db_index=True)
     role = models.ForeignKey("Role", on_delete=models.PROTECT, related_name="users")
 
