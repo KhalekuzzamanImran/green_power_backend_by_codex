@@ -4,8 +4,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     command: >
-      sh -c "python manage.py collectstatic --noinput &&
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 4 --timeout 60"
+      /app/docker/entrypoint.sh
     env_file:
       - ../.env
     environment:

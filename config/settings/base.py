@@ -29,10 +29,10 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 REDIS_URL = env.str("REDIS_URL") or (
     f"redis://{env.str('REDIS_HOST')}:6379/0" if env.str("REDIS_HOST") else ""
 )
-if not REDIS_URL:
-    raise RuntimeError("REDIS_URL or REDIS_HOST must be configured")
 ENVIRONMENT = env.str("ENVIRONMENT")
 MONGO_DB_URI = env.str("MONGO_DB_URI")
+if not REDIS_URL and not DEBUG and ENVIRONMENT != "test":
+    raise RuntimeError("REDIS_URL or REDIS_HOST must be configured")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

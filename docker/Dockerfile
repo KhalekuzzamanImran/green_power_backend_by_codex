@@ -14,4 +14,6 @@ RUN pip install --no-cache-dir -r requirements/prod.txt
 
 COPY . .
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "4", "--timeout", "60"]
+RUN chmod +x /app/docker/entrypoint.sh
+
+CMD ["/app/docker/entrypoint.sh"]
