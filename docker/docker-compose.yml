@@ -51,6 +51,8 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:?MONGO_DB_NAME is required}
     volumes:
       - mongo_data:/data/db
+    ports:
+      - "27017:27017"
 
 volumes:
   postgres_data:

@@ -8,7 +8,7 @@ __pycache__/
 *.egg-info/
 .eggs/
 .venv/
-.env
+# .env
 .env.*
 
 # Django

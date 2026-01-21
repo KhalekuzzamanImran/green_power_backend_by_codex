@@ -8,9 +8,25 @@ from common.mongo import get_mongo_database
 
 
 def store_event_mongo(message: dict) -> None:
-    collection = os.getenv("MONGO_TELEMETRY_COLLECTION", "telemetry_events")
+    collection = _collection_for_topic(message.get("topic"))
     db = get_mongo_database()
     db[collection].insert_one(dict(message))
+
+
+def _collection_for_topic(topic: str | None) -> str:
+    if topic == "MQTT_RT_DATA":
+        return "grid_rt_data"
+    if topic == "MQTT_ENY_NOW":
+        return "grid_eny_now_data"
+    if topic == "MQTT_DAY_DATA":
+        return "grid_day_data"
+    if topic == "MQTT_ENY_FRZ":
+        return "grid_eny_frz_data"
+    if topic == "CCCL/PURBACHAL/ENV_01":
+        return "environment"
+    if topic == "CCCL/PURBACHAL/ENM_01":
+        return "generator"
+    return os.getenv("MONGO_TELEMETRY_COLLECTION", "telemetry_events")
 
 
 def broadcast_realtime(message: dict) -> None:

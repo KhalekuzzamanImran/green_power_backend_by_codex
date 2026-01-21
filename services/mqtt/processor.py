@@ -60,7 +60,7 @@ class MessageProcessor:
             if assembled is None:
                 self._queue.task_done()
                 continue
-            message = _build_message(envelope, assembled)
+            message = _build_message(envelope, _normalize_keys(assembled))
             try:
                 validate_packet(message)
             except ValueError as exc:
@@ -115,6 +115,28 @@ def _build_message(envelope: MessageEnvelope, payload):
         "timestamp": envelope.timestamp,
         "payload": trimmed,
     }
+
+
+def _normalize_keys(payload):
+    if not isinstance(payload, dict):
+        return payload
+    normalized = {}
+    for key, value in payload.items():
+        new_key = (
+            str(key)
+            .strip()
+            .replace("(", "_")
+            .replace(")", "")
+            .replace("/", "_")
+            .replace("%", "percent")
+            .replace("*", "")
+            .replace(" ", "_")
+            .lower()
+        )
+        while "__" in new_key:
+            new_key = new_key.replace("__", "_")
+        normalized[new_key] = value
+    return normalized
 
 
 def _parse_payload(raw: bytes, *, pretty_json: bool):
