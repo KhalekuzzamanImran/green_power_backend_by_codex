@@ -2,13 +2,22 @@ import os
 
 import logging
 
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 
 from common.redis_client import close_async_redis
+from apps.telemetry.routing import websocket_urlpatterns
 
 _django_app = get_asgi_application()
+_router = ProtocolTypeRouter(
+    {
+        "http": _django_app,
+        "websocket": AuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
+    }
+)
 _logger = logging.getLogger(__name__)
 _lifespan_warned = False
 
@@ -35,4 +44,4 @@ async def application(scope, receive, send):
                 "ASGI lifespan events not observed; enable lifespan support to guarantee Redis cleanup."
             )
             _lifespan_warned = True
-        await _django_app(scope, receive, send)
+        await _router(scope, receive, send)

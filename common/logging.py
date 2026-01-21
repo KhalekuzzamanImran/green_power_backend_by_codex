@@ -24,4 +24,4 @@ class JsonFormatter(logging.Formatter):
             payload["mqtt_payload"] = mqtt_payload
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
-        return json.dumps(payload, ensure_ascii=True)
+        return json.dumps(payload, ensure_ascii=True, default=str)

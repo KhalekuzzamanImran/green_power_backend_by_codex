@@ -5,7 +5,11 @@ import logging
 import os
 import queue
 import threading
+from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass
+
+from apps.telemetry.services import broadcast_realtime, store_event_mongo
+from apps.telemetry.validators import validate_packet
 
 logger = logging.getLogger("mqtt.processor")
 
@@ -27,6 +31,9 @@ class MessageProcessor:
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._run, name="mqtt-message-worker", daemon=True)
         self._buffers: dict[tuple[str, str], dict[str, object]] = {}
+        self._executor = ThreadPoolExecutor(
+            max_workers=int(os.getenv("MQTT_FANOUT_WORKERS", "4"))
+        )
 
     def start(self) -> None:
         self._thread.start()
@@ -35,6 +42,7 @@ class MessageProcessor:
         self._stop_event.set()
         self._queue.join()
         self._thread.join(timeout=10)
+        self._executor.shutdown(wait=True)
 
     def enqueue(self, envelope: MessageEnvelope) -> None:
         self._queue.put(envelope)
@@ -53,6 +61,22 @@ class MessageProcessor:
                 self._queue.task_done()
                 continue
             message = _build_message(envelope, assembled)
+            try:
+                validate_packet(message)
+            except ValueError as exc:
+                logger.warning("invalid packet dropped: %s", exc)
+                self._queue.task_done()
+                continue
+            futures = [
+                self._executor.submit(store_event_mongo, message),
+                self._executor.submit(broadcast_realtime, message),
+            ]
+            done, _ = wait(futures)
+            for future in done:
+                try:
+                    future.result()
+                except Exception as exc:
+                    logger.exception("fanout error: %s", exc)
             logger.info("mqtt message", extra={"mqtt_message": message})
             self._queue.task_done()
 
@@ -83,7 +107,7 @@ def _build_message(envelope: MessageEnvelope, payload):
             "timestamp": envelope.timestamp,
             "payload": payload,
         }
-    device_id = payload.get("id")
+    device_id = payload.get("id") or payload.get("device_id")
     trimmed = {k: v for k, v in payload.items() if k != "id"}
     return {
         "device_id": device_id,

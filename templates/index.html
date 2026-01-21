@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Telemetry Realtime</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #0b0d10;
+        --panel: #141821;
+        --text: #e6e9ef;
+        --muted: #9aa4b2;
+        --accent: #3ed4a7;
+        --warn: #ff9f43;
+      }
+      body {
+        margin: 0;
+        font-family: "Courier New", Courier, monospace;
+        background: radial-gradient(circle at 20% 20%, #1b2430, #0b0d10 60%);
+        color: var(--text);
+      }
+      header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #222833;
+        background: rgba(11, 13, 16, 0.9);
+        position: sticky;
+        top: 0;
+      }
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: 0.5px;
+      }
+      .status {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+        padding: 20px 24px 28px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid #232a36;
+        border-radius: 12px;
+        padding: 14px 16px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+      }
+      .card h2 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: var(--accent);
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px 10px;
+        font-size: 13px;
+      }
+      .kv span {
+        color: var(--muted);
+      }
+      .kv strong {
+        color: var(--text);
+      }
+      pre {
+        margin: 0;
+        padding: 12px;
+        background: #0d1117;
+        border-radius: 10px;
+        border: 1px solid #1f2632;
+        font-size: 12px;
+        overflow: auto;
+        max-height: 380px;
+      }
+      .footer {
+        padding: 0 24px 24px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #1f2a38;
+        color: var(--accent);
+        font-size: 11px;
+        margin-left: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Telemetry Realtime Grid<span class="pill" id="ws-state">connecting</span></h1>
+      <div class="status" id="ws-info">Waiting for messages...</div>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Latest Message</h2>
+        <div class="kv" id="summary"></div>
+      </div>
+      <div class="card">
+        <h2>Payload</h2>
+        <pre id="payload"></pre>
+      </div>
+    </section>
+
+    <div class="footer">WebSocket: <code id="ws-url"></code></div>
+
+    <script>
+      const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+      const wsUrl = `${wsProtocol}://${location.host}/ws/telemetry/`;
+      document.getElementById("ws-url").textContent = wsUrl;
+
+      const stateEl = document.getElementById("ws-state");
+      const infoEl = document.getElementById("ws-info");
+      const summaryEl = document.getElementById("summary");
+      const payloadEl = document.getElementById("payload");
+
+      function setState(text, color) {
+        stateEl.textContent = text;
+        stateEl.style.color = color;
+      }
+
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        setState("connected", "#3ed4a7");
+        infoEl.textContent = "Listening for telemetry...";
+      };
+
+      ws.onclose = () => {
+        setState("disconnected", "#ff9f43");
+        infoEl.textContent = "Connection closed";
+      };
+
+      ws.onerror = () => {
+        setState("error", "#ff6b6b");
+        infoEl.textContent = "WebSocket error";
+      };
+
+      ws.onmessage = (event) => {
+        let data;
+        try {
+          data = JSON.parse(event.data);
+        } catch (err) {
+          infoEl.textContent = "Invalid message format";
+          return;
+        }
+
+        summaryEl.innerHTML = "";
+        const entries = [
+          ["device_id", data.device_id],
+          ["topic", data.topic],
+          ["timestamp", data.timestamp],
+        ];
+        for (const [label, value] of entries) {
+          const key = document.createElement("span");
+          key.textContent = label;
+          const val = document.createElement("strong");
+          val.textContent = value ?? "-";
+          summaryEl.appendChild(key);
+          summaryEl.appendChild(val);
+        }
+
+        payloadEl.textContent = JSON.stringify(data.payload || {}, null, 2);
+        infoEl.textContent = `Last update: ${new Date().toISOString()}`;
+      };
+    </script>
+  </body>
+</html>

@@ -1,9 +1,15 @@
 from datetime import timedelta
+import os
 from pathlib import Path
 
 import environ
 
 BASE_DIR = Path(__file__).resolve().parents[3]
+_templates_dir = Path(os.getenv("DJANGO_TEMPLATES_DIR", BASE_DIR / "templates"))
+if not _templates_dir.exists():
+    cwd_templates = Path.cwd() / "templates"
+    if cwd_templates.exists():
+        _templates_dir = cwd_templates
 
 env = environ.Env(
     DEBUG=(bool, False),
@@ -45,6 +51,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    "channels",
     "apps.users",
     "apps.service_zones",
     "apps.telemetry",
@@ -69,7 +76,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [_templates_dir],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -114,6 +121,20 @@ CACHES = {
         },
     }
 }
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [REDIS_URL]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
