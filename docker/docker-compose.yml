@@ -16,6 +16,17 @@ services:
     ports:
       - "8000:8000"
 
+  mqtt:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      python scripts/start_mqtt.py
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+
   green_power_postgres:
     image: postgres:16
     env_file:

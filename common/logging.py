@@ -16,9 +16,12 @@ class JsonFormatter(logging.Formatter):
         payload = {
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": getattr(record, "mqtt_message", record.getMessage()),
             "request_id": getattr(record, "request_id", "-"),
         }
+        mqtt_payload = getattr(record, "mqtt_payload", None)
+        if mqtt_payload is not None:
+            payload["mqtt_payload"] = mqtt_payload
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=True)
