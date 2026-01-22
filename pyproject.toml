@@ -18,6 +18,7 @@ dependencies = [
     "redis>=5.0,<6",
     "channels>=4.0,<4.1",
     "channels-redis>=4.1,<4.2",
+    "pydantic>=2.7,<2.9",
     "psycopg[binary]>=3.1.10,<3.2",
     "uvicorn[standard]>=0.23,<0.24",
     "gunicorn>=21.2,<22",

@@ -8,9 +8,11 @@ from common.mongo import get_mongo_database
 
 
 def store_event_mongo(message: dict) -> None:
-    collection = _collection_for_topic(message.get("topic"))
     db = get_mongo_database()
-    db[collection].insert_one(dict(message))
+    payload = dict(message)
+    collection = _collection_for_topic(payload.get("topic"))
+    db[collection].insert_one(payload)
+    db["telemetry_events"].insert_one(dict(payload))
 
 
 def _collection_for_topic(topic: str | None) -> str:
@@ -29,12 +31,17 @@ def _collection_for_topic(topic: str | None) -> str:
     return os.getenv("MONGO_TELEMETRY_COLLECTION", "telemetry_events")
 
 
-def broadcast_realtime(message: dict) -> None:
-    group = os.getenv("TELEMETRY_WS_GROUP", "telemetry")
+def broadcast_realtime(
+    message: dict,
+    *,
+    group: str | None = None,
+    event: str = "telemetry.message",
+) -> None:
+    group = group or os.getenv("TELEMETRY_WS_GROUP", "telemetry")
     channel_layer = get_channel_layer()
     if channel_layer is None:
         return
     async_to_sync(channel_layer.group_send)(
         group,
-        {"type": "telemetry.message", "message": message},
+        {"type": event, "message": message},
     )

@@ -26,6 +26,22 @@ services:
       - ../.env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
+    ports:
+      - "7002:7002"
+
+  tcp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      python scripts/start_tcp.py
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    ports:
+      - "6000:6000"
+      - "7001:7001"
 
   green_power_postgres:
     image: postgres:16

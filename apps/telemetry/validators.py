@@ -1,50 +1,22 @@
 from __future__ import annotations
 
-import os
+from pydantic import ValidationError
+
+from apps.telemetry.schemas import validate_message
 
 
 def validate_packet(message: dict) -> None:
-    if not isinstance(message, dict):
-        raise ValueError("message must be a dict")
-    if not message.get("topic"):
-        raise ValueError("topic is required")
-    if not message.get("timestamp"):
-        raise ValueError("timestamp is required")
-    payload = message.get("payload")
-    if not isinstance(payload, dict):
-        raise ValueError("payload must be a dict")
-    topic = message.get("topic")
-    strict_topics = _parse_list(os.getenv("TELEMETRY_REQUIRED_TOPICS", ""))
-    enforce_strict = not strict_topics or topic in strict_topics
-
-    require_device_topics = _parse_list(os.getenv("TELEMETRY_REQUIRE_DEVICE_ID_TOPICS", ""))
-    if not require_device_topics:
-        require_device_topics = strict_topics
-    if not require_device_topics or topic in require_device_topics:
-        if not message.get("device_id"):
-            raise ValueError("device_id is required")
-
-    if enforce_strict:
-        if "time" not in payload:
-            raise ValueError("payload.time is required")
-        if "isend" not in payload:
-            raise ValueError("payload.isend is required")
-
-    required_fields = _required_fields_for_topic(topic)
-    for field in required_fields:
-        if field not in payload:
-            raise ValueError(f"payload.{field} is required")
+    try:
+        validate_message(message)
+    except ValidationError as exc:
+        raise ValueError(_format_validation_error(exc)) from exc
 
 
-def _parse_list(raw: str) -> list[str]:
-    return [item.strip() for item in raw.split(",") if item.strip()]
-
-
-def _required_fields_for_topic(topic: str | None) -> list[str]:
-    if not topic:
-        return _parse_list(os.getenv("TELEMETRY_REQUIRED_PAYLOAD_FIELDS", ""))
-    topic_key = topic.replace("/", "_").replace("-", "_").upper()
-    per_topic = os.getenv(f"TELEMETRY_REQUIRED_PAYLOAD_FIELDS_{topic_key}", "")
-    if per_topic:
-        return _parse_list(per_topic)
-    return _parse_list(os.getenv("TELEMETRY_REQUIRED_PAYLOAD_FIELDS", ""))
+def _format_validation_error(exc: ValidationError) -> str:
+    parts = []
+    for error in exc.errors():
+        location = ".".join(str(item) for item in error.get("loc", []))
+        msg = error.get("msg", "invalid")
+        error_type = error.get("type", "error")
+        parts.append(f"{location}: {msg} ({error_type})")
+    return "; ".join(parts) if parts else "invalid payload"

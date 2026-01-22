@@ -3,7 +3,12 @@ from django.urls import include, path
 from django.views.generic import TemplateView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from common.health import HealthCheckView, ReadinessCheckView
+from common.health import (
+    HealthCheckView,
+    ReadinessCheckView,
+    TCPHealthCheckView,
+    MQTTHealthCheckView,
+)
 
 urlpatterns = [
     path("", TemplateView.as_view(template_name="index.html"), name="index"),
@@ -12,5 +17,7 @@ urlpatterns = [
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/health/", HealthCheckView.as_view(), name="health"),
     path("api/ready/", ReadinessCheckView.as_view(), name="ready"),
+    path("api/health/tcp/", TCPHealthCheckView.as_view(), name="tcp-health"),
+    path("api/health/mqtt/", MQTTHealthCheckView.as_view(), name="mqtt-health"),
     path("api/users/", include("apps.users.urls")),
 ]

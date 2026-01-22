@@ -10,6 +10,8 @@ if not _templates_dir.exists():
     cwd_templates = Path.cwd() / "templates"
     if cwd_templates.exists():
         _templates_dir = cwd_templates
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 env = environ.Env(
     DEBUG=(bool, False),
@@ -27,7 +29,15 @@ env = environ.Env(
     MONGO_DB_URI=(str, ""),
 )
 
-env.read_env(str(BASE_DIR / ".env"))
+_read_dotenv = os.getenv("DJANGO_READ_DOT_ENV_FILE", "1").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+_dotenv_path = BASE_DIR / ".env"
+if _read_dotenv and _dotenv_path.exists():
+    env.read_env(str(_dotenv_path))
 
 DEBUG = env.bool("DEBUG")
 SECRET_KEY = env("SECRET_KEY")
@@ -37,6 +47,8 @@ REDIS_URL = env.str("REDIS_URL") or (
 )
 ENVIRONMENT = env.str("ENVIRONMENT")
 MONGO_DB_URI = env.str("MONGO_DB_URI")
+TCP_HEALTH_URL = env.str("TCP_HEALTH_URL", default="http://tcp:7001/health")
+MQTT_HEALTH_URL = env.str("MQTT_HEALTH_URL", default="http://mqtt:7002/health")
 if not REDIS_URL and not DEBUG and ENVIRONMENT != "test":
     raise RuntimeError("REDIS_URL or REDIS_HOST must be configured")
 
@@ -238,10 +250,22 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "filters": ["request_id"],
             "formatter": "json",
+            "level": "DEBUG",
         }
+        ,
+        "warning_file": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": str(LOG_DIR / "app.log"),
+            "when": "midnight",
+            "backupCount": 30,
+            "encoding": "utf-8",
+            "formatter": "json",
+            "level": "WARNING",
+            "delay": True,
+        },
     },
     "root": {
-        "handlers": ["console"],
-        "level": "INFO",
+        "handlers": ["console", "warning_file"],
+        "level": "DEBUG",
     },
 }
