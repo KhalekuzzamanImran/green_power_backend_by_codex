@@ -19,5 +19,7 @@ urlpatterns = [
     path("api/ready/", ReadinessCheckView.as_view(), name="ready"),
     path("api/health/tcp/", TCPHealthCheckView.as_view(), name="tcp-health"),
     path("api/health/mqtt/", MQTTHealthCheckView.as_view(), name="mqtt-health"),
+    path("api/telemetry/", include("apps.telemetry.urls")),
+    path("api/service-zones/", include("apps.service_zones.urls")),
     path("api/users/", include("apps.users.urls")),
 ]

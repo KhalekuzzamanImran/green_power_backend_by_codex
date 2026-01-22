@@ -1,21 +1,26 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import ListAPIView
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.api.serializers import (
+    RoleSerializer,
     TokenObtainSerializer,
     TokenPairSerializer,
     TokenRefreshSerializer,
     TokenLogoutSerializer,
+    UserListSerializer,
 )
+from apps.users.models import Role, User
 from apps.users.services.auth_service import (
     authenticate_user,
     blacklist_refresh_token,
     issue_tokens_for_user,
     refresh_tokens,
 )
+from common.api.time_range import TIME_RANGE_PARAMETERS, TimeRangeFilterMixin
 from common.redis_client import get_async_redis
 
 
@@ -75,3 +80,15 @@ class TokenLogoutView(APIView):
         serializer.is_valid(raise_exception=True)
         blacklist_refresh_token(serializer.validated_data["refresh"])
         return Response(status=204)
+
+
+@extend_schema(parameters=TIME_RANGE_PARAMETERS, responses={200: RoleSerializer})
+class RoleListView(TimeRangeFilterMixin, ListAPIView):
+    queryset = Role.objects.all().order_by("-created_at")
+    serializer_class = RoleSerializer
+
+
+@extend_schema(parameters=TIME_RANGE_PARAMETERS, responses={200: UserListSerializer})
+class UserListView(TimeRangeFilterMixin, ListAPIView):
+    queryset = User.objects.all().order_by("-created_at")
+    serializer_class = UserListSerializer
