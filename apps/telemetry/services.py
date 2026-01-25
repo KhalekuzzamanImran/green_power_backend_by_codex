@@ -3,32 +3,95 @@ from __future__ import annotations
 import os
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.conf import settings
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from common.mongo import get_mongo_database
+
+
+def _normalize_timestamp(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            return timezone.datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+        except (OSError, OverflowError, ValueError):
+            return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.isdigit():
+            try:
+                return timezone.datetime.fromtimestamp(int(stripped) / 1000, tz=timezone.utc)
+            except (OSError, OverflowError, ValueError):
+                return None
+        parsed = parse_datetime(stripped)
+        if parsed is None:
+            return None
+        if timezone.is_naive(parsed):
+            return timezone.make_aware(parsed, timezone.get_current_timezone())
+        return parsed
+    return None
 
 
 def store_event_mongo(message: dict) -> None:
     db = get_mongo_database()
     payload = dict(message)
-    collection = _collection_for_topic(payload.get("topic"))
-    db[collection].insert_one(payload)
+    normalized_timestamp = _normalize_timestamp(payload.get("timestamp"))
+    if normalized_timestamp is not None:
+        payload["timestamp"] = normalized_timestamp
+    collections = _collections_for_topic(payload.get("topic"))
+    for collection in collections:
+        db[collection].insert_one(payload)
     db["telemetry_events"].insert_one(dict(payload))
 
 
-def _collection_for_topic(topic: str | None) -> str:
+def _collections_for_topic(topic: str | None) -> list[str]:
     if topic == "MQTT_RT_DATA":
-        return "grid_rt_data"
+        return ["grid_rt_data"]
     if topic == "MQTT_ENY_NOW":
-        return "grid_eny_now_data"
+        return ["grid_eny_now_data", "today_grid_eny_now_data"]
     if topic == "MQTT_DAY_DATA":
-        return "grid_day_data"
+        return ["grid_day_data"]
     if topic == "MQTT_ENY_FRZ":
-        return "grid_eny_frz_data"
+        return ["grid_eny_frz_data"]
     if topic == "CCCL/PURBACHAL/ENV_01":
-        return "environment"
+        return ["environment"]
     if topic == "CCCL/PURBACHAL/ENM_01":
-        return "generator"
-    return os.getenv("MONGO_TELEMETRY_COLLECTION", "telemetry_events")
+        return ["generator"]
+    return [os.getenv("MONGO_TELEMETRY_COLLECTION", "telemetry_events")]
+
+
+def ensure_today_collection_ttl_indexes() -> None:
+    if not getattr(settings, "MONGO_DB_URI", None):
+        return
+    ttl_seconds = getattr(settings, "MONGO_TODAY_TTL_SECONDS", 86400)
+    if ttl_seconds <= 0:
+        return
+
+    db = get_mongo_database()
+    for collection in ("today_grid_rt_data", "today_grid_eny_now_data"):
+        db[collection].create_index("timestamp", expireAfterSeconds=ttl_seconds)
+
+    last_7_days_ttl_seconds = getattr(settings, "MONGO_LAST_7_DAYS_TTL_SECONDS", 604800)
+    if last_7_days_ttl_seconds > 0:
+        db["last_7_days_grid_rt_data"].create_index(
+            "timestamp", expireAfterSeconds=last_7_days_ttl_seconds
+        )
+
+    last_30_days_ttl_seconds = getattr(settings, "MONGO_LAST_30_DAYS_TTL_SECONDS", 2592000)
+    if last_30_days_ttl_seconds > 0:
+        db["last_30_days_grid_rt_data"].create_index(
+            "timestamp", expireAfterSeconds=last_30_days_ttl_seconds
+        )
+
+    last_6_months_ttl_seconds = getattr(settings, "MONGO_LAST_6_MONTHS_TTL_SECONDS", 15552000)
+    if last_6_months_ttl_seconds > 0:
+        db["last_6_months_grid_rt_data"].create_index(
+            "timestamp", expireAfterSeconds=last_6_months_ttl_seconds
+        )
+
+    db["this_year_grid_rt_data"].create_index("expires_at", expireAfterSeconds=0)
 
 
 def broadcast_realtime(

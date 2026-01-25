@@ -43,6 +43,38 @@ services:
       - "6000:6000"
       - "7001:7001"
 
+  celery_worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      celery -A config worker -l info
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    depends_on:
+      green_power_redis:
+        condition: service_healthy
+      green_power_mongodb:
+        condition: service_healthy
+
+  celery_beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: >
+      celery -A config beat -l info
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    depends_on:
+      green_power_redis:
+        condition: service_healthy
+      green_power_mongodb:
+        condition: service_healthy
+
   green_power_postgres:
     image: postgres:16
     env_file:
@@ -56,6 +88,11 @@ services:
 
   green_power_redis:
     image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   green_power_mongodb:
     image: mongo:7
@@ -69,6 +106,22 @@ services:
       - mongo_data:/data/db
     ports:
       - "27017:27017"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--username",
+          "${MONGO_DB_USER}",
+          "--password",
+          "${MONGO_DB_PASSWORD}",
+          "--eval",
+          "db.adminCommand('ping')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:
