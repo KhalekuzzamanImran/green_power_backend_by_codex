@@ -24,6 +24,9 @@ if [ "$try" -gt "$max_tries" ]; then
     exit 1
 fi
 
+echo "Ensuring Mongo indexes..."
+python manage.py ensure_mongo_indexes
+
 python manage.py collectstatic --noinput
 
 exec gunicorn config.asgi:application --bind 0.0.0.0:8000 --workers 3 --threads 4 --timeout 60 -k uvicorn.workers.UvicornWorker

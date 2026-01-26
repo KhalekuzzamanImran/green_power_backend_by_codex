@@ -106,6 +106,9 @@ Example:
 ## Postman
 Import `green_power_backend.postman_collection.json` from the project root.
 
-## Notes
-- Mongo indexes are created at Django startup.
+## Indexes
+Run once during deployment:
+```
+python manage.py ensure_mongo_indexes
+```
 - Telemetry timestamps are stored as BSON dates for range queries.
