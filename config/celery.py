@@ -52,4 +52,16 @@ app.conf.beat_schedule = {
         "task": "apps.telemetry.tasks.aggregate_env_data_six_hours",
         "schedule": crontab(minute=0, hour="*/6"),
     },
+    "aggregate-eny-now-data-thirty-minutes": {
+        "task": "apps.telemetry.tasks.aggregate_eny_now_data_thirty_minutes",
+        "schedule": crontab(minute="*/30"),
+    },
+    "aggregate-eny-now-data-three-hours": {
+        "task": "apps.telemetry.tasks.aggregate_eny_now_data_three_hours",
+        "schedule": crontab(minute=0, hour="*/3"),
+    },
+    "aggregate-eny-now-data-six-hours": {
+        "task": "apps.telemetry.tasks.aggregate_eny_now_data_six_hours",
+        "schedule": crontab(minute=0, hour="*/6"),
+    },
 }

@@ -50,7 +50,11 @@ def _collections_for_topic(topic: str | None) -> list[str]:
     if topic == "MQTT_RT_DATA":
         return ["grid_rt_data"]
     if topic == "MQTT_ENY_NOW":
-        return ["grid_eny_now_data", "today_grid_eny_now_data"]
+        return [
+            "grid_eny_now_data",
+            "today_grid_eny_now_data",
+            "last_7_days_grid_eny_now_data",
+        ]
     if topic == "MQTT_DAY_DATA":
         return ["grid_day_data"]
     if topic == "MQTT_ENY_FRZ":
@@ -84,6 +88,10 @@ def ensure_today_collection_ttl_indexes() -> None:
     base_collections = [
         "grid_rt_data",
         "grid_eny_now_data",
+        "last_7_days_grid_eny_now_data",
+        "last_30_days_grid_eny_now_data",
+        "last_6_months_grid_eny_now_data",
+        "this_year_grid_eny_now_data",
         "grid_day_data",
         "grid_eny_frz_data",
         "environment_data",
@@ -98,21 +106,41 @@ def ensure_today_collection_ttl_indexes() -> None:
     if last_7_days_ttl_seconds > 0:
         _ensure_ttl_index(db, "last_7_days_grid_rt_data", ttl_seconds=last_7_days_ttl_seconds)
         _ensure_ttl_index(db, "last_7_days_environment", ttl_seconds=last_7_days_ttl_seconds)
+        _ensure_ttl_index(
+            db,
+            "last_7_days_grid_eny_now_data",
+            ttl_seconds=last_7_days_ttl_seconds,
+        )
 
     last_30_days_ttl_seconds = getattr(settings, "MONGO_LAST_30_DAYS_TTL_SECONDS", 2592000)
     if last_30_days_ttl_seconds > 0:
         _ensure_ttl_index(db, "last_30_days_grid_rt_data", ttl_seconds=last_30_days_ttl_seconds)
         _ensure_ttl_index(db, "last_30_days_environment", ttl_seconds=last_30_days_ttl_seconds)
+        _ensure_ttl_index(
+            db,
+            "last_30_days_grid_eny_now_data",
+            ttl_seconds=last_30_days_ttl_seconds,
+        )
 
     last_6_months_ttl_seconds = getattr(settings, "MONGO_LAST_6_MONTHS_TTL_SECONDS", 15552000)
     if last_6_months_ttl_seconds > 0:
         _ensure_ttl_index(db, "last_6_months_grid_rt_data", ttl_seconds=last_6_months_ttl_seconds)
         _ensure_ttl_index(db, "last_6_months_environment", ttl_seconds=last_6_months_ttl_seconds)
+        _ensure_ttl_index(
+            db,
+            "last_6_months_grid_eny_now_data",
+            ttl_seconds=last_6_months_ttl_seconds,
+        )
 
     this_year_ttl_seconds = getattr(settings, "MONGO_THIS_YEAR_TTL_SECONDS", 31536000)
     if this_year_ttl_seconds > 0:
         _ensure_ttl_index(db, "this_year_grid_rt_data", ttl_seconds=this_year_ttl_seconds)
         _ensure_ttl_index(db, "this_year_environment", ttl_seconds=this_year_ttl_seconds)
+        _ensure_ttl_index(
+            db,
+            "this_year_grid_eny_now_data",
+            ttl_seconds=this_year_ttl_seconds,
+        )
     db["telemetry_events"].create_index("timestamp")
     db["telemetry_events"].create_index([("timestamp", 1), ("topic", 1)])
 

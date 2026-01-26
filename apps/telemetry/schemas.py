@@ -65,6 +65,8 @@ class RTDataPayload(BaseModel):
 
 
 class EnergyNowPayload(BaseModel):
+    time: int | float
+    isend: int | float
     zygsz: float
     fygsz: float
     zwgsz: float
