@@ -20,6 +20,8 @@ def _coerce_number(value):
     return None
 
 
+
+
 @shared_task
 def aggregate_rt_data_minutely() -> None:
     if not getattr(settings, "MONGO_DB_URI", None):
@@ -334,15 +336,11 @@ def aggregate_rt_data_six_hours() -> None:
         averaged_value = sums[key] / count
         averaged_payload[key] = round(averaged_value, 3)
 
-    expires_at = window_end.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    expires_at = expires_at.replace(year=expires_at.year + 1)
-
     aggregated_doc = {
         "topic": topic,
         "device_id": device_id,
         "timestamp": window_end,
         "payload": averaged_payload,
-        "expires_at": expires_at,
     }
 
     db["this_year_grid_rt_data"].insert_one(aggregated_doc)
@@ -364,7 +362,7 @@ def aggregate_env_data_minutely() -> None:
     ):
         return
 
-    cursor = db["environment"].find(
+    cursor = db["environment_data"].find(
         {"timestamp": {"$gte": window_start, "$lt": window_end}},
         projection={"payload": 1, "topic": 1, "device_id": 1},
     )
@@ -643,15 +641,11 @@ def aggregate_env_data_six_hours() -> None:
         averaged_value = sums[key] / count
         averaged_payload[key] = round(averaged_value, 3)
 
-    expires_at = window_end.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-    expires_at = expires_at.replace(year=expires_at.year + 1)
-
     aggregated_doc = {
         "topic": topic,
         "device_id": device_id,
         "timestamp": window_end,
         "payload": averaged_payload,
-        "expires_at": expires_at,
     }
 
     db["this_year_environment"].insert_one(aggregated_doc)

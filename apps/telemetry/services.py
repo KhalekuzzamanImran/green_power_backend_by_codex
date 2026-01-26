@@ -56,10 +56,23 @@ def _collections_for_topic(topic: str | None) -> list[str]:
     if topic == "MQTT_ENY_FRZ":
         return ["grid_eny_frz_data"]
     if topic == "CCCL/PURBACHAL/ENV_01":
-        return ["environment"]
+        return ["environment_data"]
     if topic == "CCCL/PURBACHAL/ENM_01":
-        return ["generator"]
+        return ["generator_data"]
     return [os.getenv("MONGO_TELEMETRY_COLLECTION", "telemetry_events")]
+
+
+def _ensure_ttl_index(db, collection: str, *, ttl_seconds: int) -> None:
+    if ttl_seconds <= 0:
+        return
+    existing = db[collection].index_information().get("timestamp_1")
+    if existing and existing.get("expireAfterSeconds") != ttl_seconds:
+        db[collection].drop_index("timestamp_1")
+    db[collection].create_index(
+        [("timestamp", 1)],
+        name="timestamp_1",
+        expireAfterSeconds=ttl_seconds,
+    )
 
 
 def ensure_today_collection_ttl_indexes() -> None:
@@ -73,113 +86,33 @@ def ensure_today_collection_ttl_indexes() -> None:
         "grid_eny_now_data",
         "grid_day_data",
         "grid_eny_frz_data",
-        "environment",
-        "generator",
-        "today_grid_rt_data",
-        "today_grid_eny_now_data",
-        "today_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
-        "this_year_grid_rt_data",
-        "this_year_environment",
-        "last_30_days_grid_rt_data",
-        "last_30_days_environment",
-        "last_7_days_grid_rt_data",
-        "last_7_days_environment",
-        "last_6_months_grid_rt_data",
-        "last_6_months_environment",
+        "environment_data",
+        "generator_data",
     ]
-    for collection in dict.fromkeys(base_collections):
+    for collection in base_collections:
         db[collection].create_index("timestamp")
-    for collection in ("today_grid_rt_data", "today_grid_eny_now_data"):
-        if ttl_seconds > 0:
-            db[collection].create_index("timestamp", expireAfterSeconds=ttl_seconds)
-    if ttl_seconds > 0:
-        db["today_environment"].create_index("timestamp", expireAfterSeconds=ttl_seconds)
+    for collection in ("today_grid_rt_data", "today_grid_eny_now_data", "today_environment"):
+        _ensure_ttl_index(db, collection, ttl_seconds=ttl_seconds)
 
     last_7_days_ttl_seconds = getattr(settings, "MONGO_LAST_7_DAYS_TTL_SECONDS", 604800)
     if last_7_days_ttl_seconds > 0:
-        db["last_7_days_grid_rt_data"].create_index(
-            "timestamp", expireAfterSeconds=last_7_days_ttl_seconds
-        )
-        db["last_7_days_environment"].create_index(
-            "timestamp", expireAfterSeconds=last_7_days_ttl_seconds
-        )
+        _ensure_ttl_index(db, "last_7_days_grid_rt_data", ttl_seconds=last_7_days_ttl_seconds)
+        _ensure_ttl_index(db, "last_7_days_environment", ttl_seconds=last_7_days_ttl_seconds)
 
     last_30_days_ttl_seconds = getattr(settings, "MONGO_LAST_30_DAYS_TTL_SECONDS", 2592000)
     if last_30_days_ttl_seconds > 0:
-        db["last_30_days_grid_rt_data"].create_index(
-            "timestamp", expireAfterSeconds=last_30_days_ttl_seconds
-        )
-        db["last_30_days_environment"].create_index(
-            "timestamp", expireAfterSeconds=last_30_days_ttl_seconds
-        )
+        _ensure_ttl_index(db, "last_30_days_grid_rt_data", ttl_seconds=last_30_days_ttl_seconds)
+        _ensure_ttl_index(db, "last_30_days_environment", ttl_seconds=last_30_days_ttl_seconds)
 
     last_6_months_ttl_seconds = getattr(settings, "MONGO_LAST_6_MONTHS_TTL_SECONDS", 15552000)
     if last_6_months_ttl_seconds > 0:
-        db["last_6_months_grid_rt_data"].create_index(
-            "timestamp", expireAfterSeconds=last_6_months_ttl_seconds
-        )
-        db["last_6_months_environment"].create_index(
-            "timestamp", expireAfterSeconds=last_6_months_ttl_seconds
-        )
+        _ensure_ttl_index(db, "last_6_months_grid_rt_data", ttl_seconds=last_6_months_ttl_seconds)
+        _ensure_ttl_index(db, "last_6_months_environment", ttl_seconds=last_6_months_ttl_seconds)
 
-    db["this_year_grid_rt_data"].create_index("expires_at", expireAfterSeconds=0)
-    db["this_year_environment"].create_index("expires_at", expireAfterSeconds=0)
+    this_year_ttl_seconds = getattr(settings, "MONGO_THIS_YEAR_TTL_SECONDS", 31536000)
+    if this_year_ttl_seconds > 0:
+        _ensure_ttl_index(db, "this_year_grid_rt_data", ttl_seconds=this_year_ttl_seconds)
+        _ensure_ttl_index(db, "this_year_environment", ttl_seconds=this_year_ttl_seconds)
     db["telemetry_events"].create_index("timestamp")
     db["telemetry_events"].create_index([("timestamp", 1), ("topic", 1)])
 
