@@ -75,12 +75,16 @@ docker compose -f docker/docker-compose.yml --env-file ./.env restart backend ce
 - Auth: `/api/users/token/`, `/api/users/token/refresh/`, `/api/users/token/logout/`
 - RT data: `/api/telemetry/rt-data/`
 - ENY NOW data: `/api/telemetry/eny-now-data/`
+- Environment data: `/api/telemetry/environment-data/`
+- Solar data: `/api/telemetry/solar-data/`
+- Generator data: `/api/telemetry/generator-data/`
 - Telemetry events (Mongo): `/api/telemetry/events/`
 
 ### RT Data / ENY NOW Query
 Query params:
 - `start_time` (ISO 8601)
 - `end_time` (ISO 8601)
+- `device_id` (optional)
 - `page`, `page_size`
 
 Example:
@@ -96,7 +100,7 @@ Example:
 ## Telemetry Collections (Mongo)
 - `grid_rt_data`, `today_grid_rt_data`, `last_7_days_grid_rt_data`, `last_30_days_grid_rt_data`, `last_6_months_grid_rt_data`, `this_year_grid_rt_data`
 - `grid_eny_now_data`, `today_grid_eny_now_data`, `last_7_days_grid_eny_now_data`, `last_30_days_grid_eny_now_data`, `last_6_months_grid_eny_now_data`, `this_year_grid_eny_now_data`
-- `environment_data`, `today_environment`, `last_7_days_environment`, `last_30_days_environment`, `last_6_months_environment`, `this_year_environment`
+- `environment_data`, `today_environment_data`, `last_7_days_environment_data`, `last_30_days_environment_data`, `last_6_months_environment_data`, `this_year_environment_data`
 - `telemetry_events`
 
 ## Postman

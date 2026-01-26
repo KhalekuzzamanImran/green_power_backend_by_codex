@@ -347,7 +347,7 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/telemetry/rt-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50",
+              "raw": "{{base_url}}/api/telemetry/rt-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50&device_id=",
               "host": [
                 "{{base_url}}"
               ],
@@ -372,6 +372,10 @@
                 {
                   "key": "page_size",
                   "value": "50"
+                },
+                {
+                  "key": "device_id",
+                  "value": ""
                 }
               ]
             }
@@ -382,7 +386,7 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/telemetry/eny-now-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50",
+              "raw": "{{base_url}}/api/telemetry/eny-now-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50&device_id=",
               "host": [
                 "{{base_url}}"
               ],
@@ -407,6 +411,10 @@
                 {
                   "key": "page_size",
                   "value": "50"
+                },
+                {
+                  "key": "device_id",
+                  "value": ""
                 }
               ]
             }
@@ -417,7 +425,7 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/telemetry/events/?topic=MQTT_RT_DATA&start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50",
+              "raw": "{{base_url}}/api/telemetry/events/?topic=MQTT_RT_DATA&start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50&device_id=",
               "host": [
                 "{{base_url}}"
               ],
@@ -446,6 +454,130 @@
                 {
                   "key": "page_size",
                   "value": "50"
+                },
+                {
+                  "key": "device_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Environment Data",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/telemetry/environment-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50&device_id=CCCL_ENVIRONMENT_DEVICE_1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "telemetry",
+                "environment-data",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "start_time",
+                  "value": "2026-01-26T00:00:00Z"
+                },
+                {
+                  "key": "end_time",
+                  "value": "2026-01-26T23:59:59Z"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "50"
+                },
+                {
+                  "key": "device_id",
+                  "value": "CCCL_ENVIRONMENT_DEVICE_1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Solar Data",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/telemetry/solar-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50&device_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "telemetry",
+                "solar-data",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "start_time",
+                  "value": "2026-01-26T00:00:00Z"
+                },
+                {
+                  "key": "end_time",
+                  "value": "2026-01-26T23:59:59Z"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "50"
+                },
+                {
+                  "key": "device_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Generator Data",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/telemetry/generator-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50&device_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "telemetry",
+                "generator-data",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "start_time",
+                  "value": "2026-01-26T00:00:00Z"
+                },
+                {
+                  "key": "end_time",
+                  "value": "2026-01-26T23:59:59Z"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "50"
+                },
+                {
+                  "key": "device_id",
+                  "value": ""
                 }
               ]
             }

@@ -31,3 +31,26 @@ class EnyNowDataSerializer(serializers.Serializer):
     device_id = serializers.CharField(required=False, allow_null=True)
     timestamp = serializers.DateTimeField()
     payload = serializers.JSONField()
+
+
+class EnvironmentDataSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    topic = serializers.CharField()
+    device_id = serializers.CharField(required=False, allow_null=True)
+    timestamp = serializers.DateTimeField()
+    payload = serializers.JSONField()
+
+
+class SolarDataSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    device_id = serializers.CharField(required=False, allow_null=True)
+    timestamp = serializers.DateTimeField()
+    payload = serializers.JSONField()
+
+
+class GeneratorDataSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    topic = serializers.CharField()
+    device_id = serializers.CharField(required=False, allow_null=True)
+    timestamp = serializers.DateTimeField()
+    payload = serializers.JSONField()

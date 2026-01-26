@@ -20,6 +20,64 @@ def _coerce_number(value):
     return None
 
 
+def _aggregate_window(
+    db,
+    *,
+    source_collection: str,
+    target_collection: str,
+    window_start,
+    window_end,
+    default_topic: str,
+):
+    cursor = db[source_collection].find(
+        {"timestamp": {"$gte": window_start, "$lt": window_end}},
+        projection={"payload": 1, "topic": 1, "device_id": 1},
+    )
+
+    groups = {}
+    for doc in cursor:
+        device_id = doc.get("device_id")
+        topic = doc.get("topic", default_topic)
+        payload = doc.get("payload") or {}
+        key = (device_id, topic)
+        if key not in groups:
+            groups[key] = {"sums": {}, "counts": {}}
+        sums = groups[key]["sums"]
+        counts = groups[key]["counts"]
+        for field, value in payload.items():
+            numeric_value = _coerce_number(value)
+            if numeric_value is None:
+                continue
+            sums[field] = sums.get(field, 0.0) + numeric_value
+            counts[field] = counts.get(field, 0) + 1
+
+    if not groups:
+        return
+
+    for (device_id, topic), agg in groups.items():
+        if db[target_collection].find_one(
+            {"timestamp": window_end, "device_id": device_id, "topic": topic},
+            projection={"_id": 1},
+        ):
+            continue
+
+        averaged_payload = {}
+        for field, total in agg["sums"].items():
+            count = agg["counts"].get(field)
+            if not count:
+                continue
+            averaged_payload[field] = round(total / count, 3)
+
+        db[target_collection].insert_one(
+            {
+                "topic": topic,
+                "device_id": device_id,
+                "timestamp": window_end,
+                "payload": averaged_payload,
+            }
+        )
+
+
 
 
 @shared_task
@@ -32,55 +90,14 @@ def aggregate_rt_data_minutely() -> None:
     window_start = window_end - timedelta(minutes=1)
 
     db = get_mongo_database()
-    if db["today_grid_rt_data"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["grid_rt_data"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="grid_rt_data",
+        target_collection="today_grid_rt_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="MQTT_RT_DATA",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "MQTT_RT_DATA"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["today_grid_rt_data"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -92,60 +109,14 @@ def aggregate_rt_data_ten_minutes() -> None:
     window_end = now.replace(second=0, microsecond=0)
     window_start = window_end - timedelta(minutes=10)
     db = get_mongo_database()
-    if db["last_7_days_grid_rt_data"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["today_grid_rt_data"].find(
-        {
-            "timestamp": {
-                "$gte": window_start,
-                "$lt": window_end,
-            }
-        },
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="today_grid_rt_data",
+        target_collection="last_7_days_grid_rt_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="MQTT_RT_DATA",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "MQTT_RT_DATA"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["last_7_days_grid_rt_data"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -158,60 +129,14 @@ def aggregate_rt_data_thirty_minutes() -> None:
     window_start = window_end - timedelta(minutes=30)
 
     db = get_mongo_database()
-    if db["last_30_days_grid_rt_data"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["last_7_days_grid_rt_data"].find(
-        {
-            "timestamp": {
-                "$gte": window_start,
-                "$lt": window_end,
-            }
-        },
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="last_7_days_grid_rt_data",
+        target_collection="last_30_days_grid_rt_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="MQTT_RT_DATA",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "MQTT_RT_DATA"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["last_30_days_grid_rt_data"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -224,60 +149,14 @@ def aggregate_rt_data_three_hours() -> None:
     window_start = window_end - timedelta(hours=3)
 
     db = get_mongo_database()
-    if db["last_6_months_grid_rt_data"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["last_30_days_grid_rt_data"].find(
-        {
-            "timestamp": {
-                "$gte": window_start,
-                "$lt": window_end,
-            }
-        },
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="last_30_days_grid_rt_data",
+        target_collection="last_6_months_grid_rt_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="MQTT_RT_DATA",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "MQTT_RT_DATA"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["last_6_months_grid_rt_data"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -290,60 +169,14 @@ def aggregate_rt_data_six_hours() -> None:
     window_start = window_end - timedelta(hours=6)
 
     db = get_mongo_database()
-    if db["this_year_grid_rt_data"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["last_6_months_grid_rt_data"].find(
-        {
-            "timestamp": {
-                "$gte": window_start,
-                "$lt": window_end,
-            }
-        },
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="last_6_months_grid_rt_data",
+        target_collection="this_year_grid_rt_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="MQTT_RT_DATA",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "MQTT_RT_DATA"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["this_year_grid_rt_data"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -356,55 +189,14 @@ def aggregate_env_data_minutely() -> None:
     window_start = window_end - timedelta(minutes=1)
 
     db = get_mongo_database()
-    if db["today_environment"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["environment_data"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="environment_data",
+        target_collection="today_environment_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="CCCL/PURBACHAL/ENV_01",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "CCCL/PURBACHAL/ENV_01"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["today_environment"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -417,55 +209,14 @@ def aggregate_env_data_ten_minutes() -> None:
     window_start = window_end - timedelta(minutes=10)
 
     db = get_mongo_database()
-    if db["last_7_days_environment"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["today_environment"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="today_environment_data",
+        target_collection="last_7_days_environment_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="CCCL/PURBACHAL/ENV_01",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "CCCL/PURBACHAL/ENV_01"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["last_7_days_environment"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -478,55 +229,14 @@ def aggregate_env_data_thirty_minutes() -> None:
     window_start = window_end - timedelta(minutes=30)
 
     db = get_mongo_database()
-    if db["last_30_days_environment"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["last_7_days_environment"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="last_7_days_environment_data",
+        target_collection="last_30_days_environment_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="CCCL/PURBACHAL/ENV_01",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "CCCL/PURBACHAL/ENV_01"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["last_30_days_environment"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -539,55 +249,14 @@ def aggregate_env_data_three_hours() -> None:
     window_start = window_end - timedelta(hours=3)
 
     db = get_mongo_database()
-    if db["last_6_months_environment"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["last_30_days_environment"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="last_30_days_environment_data",
+        target_collection="last_6_months_environment_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="CCCL/PURBACHAL/ENV_01",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "CCCL/PURBACHAL/ENV_01"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["last_6_months_environment"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -600,55 +269,14 @@ def aggregate_env_data_six_hours() -> None:
     window_start = window_end - timedelta(hours=6)
 
     db = get_mongo_database()
-    if db["this_year_environment"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["last_6_months_environment"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="last_6_months_environment_data",
+        target_collection="this_year_environment_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="CCCL/PURBACHAL/ENV_01",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "CCCL/PURBACHAL/ENV_01"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["this_year_environment"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -661,55 +289,14 @@ def aggregate_eny_now_data_thirty_minutes() -> None:
     window_start = window_end - timedelta(minutes=30)
 
     db = get_mongo_database()
-    if db["last_30_days_grid_eny_now_data"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["today_grid_eny_now_data"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="today_grid_eny_now_data",
+        target_collection="last_30_days_grid_eny_now_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="MQTT_ENY_NOW",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "MQTT_ENY_NOW"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["last_30_days_grid_eny_now_data"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -722,55 +309,14 @@ def aggregate_eny_now_data_three_hours() -> None:
     window_start = window_end - timedelta(hours=3)
 
     db = get_mongo_database()
-    if db["last_6_months_grid_eny_now_data"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["last_30_days_grid_eny_now_data"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="last_30_days_grid_eny_now_data",
+        target_collection="last_6_months_grid_eny_now_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="MQTT_ENY_NOW",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "MQTT_ENY_NOW"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["last_6_months_grid_eny_now_data"].insert_one(aggregated_doc)
 
 
 @shared_task
@@ -783,52 +329,11 @@ def aggregate_eny_now_data_six_hours() -> None:
     window_start = window_end - timedelta(hours=6)
 
     db = get_mongo_database()
-    if db["this_year_grid_eny_now_data"].find_one(
-        {"timestamp": window_end},
-        projection={"_id": 1},
-    ):
-        return
-
-    cursor = db["last_6_months_grid_eny_now_data"].find(
-        {"timestamp": {"$gte": window_start, "$lt": window_end}},
-        projection={"payload": 1, "topic": 1, "device_id": 1},
+    _aggregate_window(
+        db,
+        source_collection="last_6_months_grid_eny_now_data",
+        target_collection="this_year_grid_eny_now_data",
+        window_start=window_start,
+        window_end=window_end,
+        default_topic="MQTT_ENY_NOW",
     )
-
-    sums: dict[str, float] = {}
-    counts: dict[str, int] = {}
-    device_id = None
-    topic = "MQTT_ENY_NOW"
-    seen = 0
-
-    for doc in cursor:
-        seen += 1
-        if device_id is None:
-            device_id = doc.get("device_id")
-        topic = doc.get("topic", topic)
-        payload = doc.get("payload") or {}
-        for key, value in payload.items():
-            numeric_value = _coerce_number(value)
-            if numeric_value is None:
-                continue
-            sums[key] = sums.get(key, 0.0) + numeric_value
-            counts[key] = counts.get(key, 0) + 1
-
-    if seen == 0:
-        return
-
-    averaged_payload = {}
-    for key in sums:
-        count = counts.get(key)
-        if not count:
-            continue
-        averaged_value = sums[key] / count
-        averaged_payload[key] = round(averaged_value, 3)
-
-    aggregated_doc = {
-        "topic": topic,
-        "device_id": device_id,
-        "timestamp": window_end,
-        "payload": averaged_payload,
-    }
-
-    db["this_year_grid_eny_now_data"].insert_one(aggregated_doc)

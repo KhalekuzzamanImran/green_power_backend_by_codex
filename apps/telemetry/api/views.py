@@ -14,7 +14,10 @@ from common.mongo import get_mongo_database
 
 from .serializers import (
     EnyNowDataSerializer,
+    EnvironmentDataSerializer,
+    GeneratorDataSerializer,
     RTDataSerializer,
+    SolarDataSerializer,
     TelemetryEventMongoSerializer,
     TelemetryEventSerializer,
 )
@@ -65,6 +68,12 @@ class MongoPageNumberPagination(PageNumberPagination):
             location=OpenApiParameter.QUERY,
             description="Filter by topic",
         ),
+        OpenApiParameter(
+            name="device_id",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Filter by device_id",
+        ),
     ],
     responses={200: TelemetryEventMongoSerializer},
 )
@@ -80,6 +89,9 @@ class TelemetryEventListView(APIView):
         topic = request.query_params.get("topic")
         if topic:
             query["topic"] = topic
+        device_id = request.query_params.get("device_id")
+        if device_id:
+            query["device_id"] = device_id
         if start_time and end_time:
             query["timestamp"] = {"$gte": start_time, "$lte": end_time}
 
@@ -111,7 +123,18 @@ class TelemetryEventListView(APIView):
         }
 
 
-@extend_schema(parameters=TIME_RANGE_PARAMETERS, responses={200: RTDataSerializer})
+@extend_schema(
+    parameters=[
+        *TIME_RANGE_PARAMETERS,
+        OpenApiParameter(
+            name="device_id",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Filter by device_id",
+        ),
+    ],
+    responses={200: RTDataSerializer},
+)
 class RTDataListView(APIView):
     pagination_class = MongoPageNumberPagination
 
@@ -122,6 +145,9 @@ class RTDataListView(APIView):
 
         collection = self._select_collection(start_time, end_time)
         query = {}
+        device_id = request.query_params.get("device_id")
+        if device_id:
+            query["device_id"] = device_id
         if start_time and end_time:
             query["timestamp"] = {"$gte": start_time, "$lte": end_time}
 
@@ -168,7 +194,18 @@ class RTDataListView(APIView):
         }
 
 
-@extend_schema(parameters=TIME_RANGE_PARAMETERS, responses={200: EnyNowDataSerializer})
+@extend_schema(
+    parameters=[
+        *TIME_RANGE_PARAMETERS,
+        OpenApiParameter(
+            name="device_id",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Filter by device_id",
+        ),
+    ],
+    responses={200: EnyNowDataSerializer},
+)
 class EnyNowDataListView(APIView):
     pagination_class = MongoPageNumberPagination
 
@@ -179,6 +216,9 @@ class EnyNowDataListView(APIView):
 
         collection = self._select_collection(start_time, end_time)
         query = {}
+        device_id = request.query_params.get("device_id")
+        if device_id:
+            query["device_id"] = device_id
         if start_time and end_time:
             query["timestamp"] = {"$gte": start_time, "$lte": end_time}
 
@@ -214,6 +254,202 @@ class EnyNowDataListView(APIView):
         if delta <= timedelta(days=180):
             return "last_6_months_grid_eny_now_data"
         return "this_year_grid_eny_now_data"
+
+    def _serialize_doc(self, doc):
+        return {
+            "id": str(doc.get("_id")),
+            "topic": doc.get("topic"),
+            "device_id": doc.get("device_id"),
+            "timestamp": doc.get("timestamp"),
+            "payload": doc.get("payload"),
+        }
+
+
+@extend_schema(
+    parameters=[
+        *TIME_RANGE_PARAMETERS,
+        OpenApiParameter(
+            name="device_id",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Filter by device_id",
+        ),
+    ],
+    responses={200: EnvironmentDataSerializer},
+)
+class EnvironmentDataListView(APIView):
+    pagination_class = MongoPageNumberPagination
+
+    def get(self, request, *args, **kwargs):
+        start_time, end_time = get_time_range(request)
+        if (start_time is None) != (end_time is None):
+            raise ValidationError({"detail": "start_time and end_time must be provided together"})
+
+        collection = self._select_collection(start_time, end_time)
+        query = {}
+        device_id = request.query_params.get("device_id")
+        if device_id:
+            query["device_id"] = device_id
+        if start_time and end_time:
+            query["timestamp"] = {"$gte": start_time, "$lte": end_time}
+
+        db = get_mongo_database()
+        paginator = self.pagination_class()
+        page_size = paginator.get_page_size(request)
+        page_number = int(paginator.get_page_number(request, None))
+        offset = (page_number - 1) * page_size
+
+        cursor = (
+            db[collection]
+            .find(query)
+            .sort("timestamp", 1)
+            .skip(offset)
+            .limit(page_size)
+        )
+        items = [self._serialize_doc(doc) for doc in cursor]
+        total_count = db[collection].count_documents(query)
+        paginator.paginate_mongo(request, total_count=total_count, items=items)
+        return paginator.get_paginated_response(items)
+
+    def _select_collection(self, start_time, end_time):
+        if start_time is None or end_time is None:
+            return "environment_data"
+
+        delta = end_time - start_time
+        if delta <= timedelta(hours=24):
+            return "today_environment_data"
+        if delta <= timedelta(days=7):
+            return "last_7_days_environment_data"
+        if delta <= timedelta(days=30):
+            return "last_30_days_environment_data"
+        if delta <= timedelta(days=180):
+            return "last_6_months_environment_data"
+        return "this_year_environment_data"
+
+    def _serialize_doc(self, doc):
+        return {
+            "id": str(doc.get("_id")),
+            "topic": doc.get("topic"),
+            "device_id": doc.get("device_id"),
+            "timestamp": doc.get("timestamp"),
+            "payload": doc.get("payload"),
+        }
+
+
+@extend_schema(
+    parameters=[
+        *TIME_RANGE_PARAMETERS,
+        OpenApiParameter(
+            name="device_id",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Filter by device_id (client_id for solar)",
+        ),
+    ],
+    responses={200: SolarDataSerializer},
+)
+class SolarDataListView(APIView):
+    pagination_class = MongoPageNumberPagination
+
+    def get(self, request, *args, **kwargs):
+        start_time, end_time = get_time_range(request)
+        if (start_time is None) != (end_time is None):
+            raise ValidationError({"detail": "start_time and end_time must be provided together"})
+
+        collection = self._select_collection(start_time, end_time)
+        query = {}
+        device_id = request.query_params.get("device_id")
+        if device_id:
+            query["client_id"] = device_id
+        if start_time and end_time:
+            query["timestamp"] = {"$gte": start_time, "$lte": end_time}
+
+        db = get_mongo_database()
+        paginator = self.pagination_class()
+        page_size = paginator.get_page_size(request)
+        page_number = int(paginator.get_page_number(request, None))
+        offset = (page_number - 1) * page_size
+
+        cursor = (
+            db[collection]
+            .find(query)
+            .sort("timestamp", 1)
+            .skip(offset)
+            .limit(page_size)
+        )
+        items = [self._serialize_doc(doc) for doc in cursor]
+        total_count = db[collection].count_documents(query)
+        paginator.paginate_mongo(request, total_count=total_count, items=items)
+        return paginator.get_paginated_response(items)
+
+    def _select_collection(self, start_time, end_time):
+        if start_time is None or end_time is None:
+            return "solar_data"
+
+        delta = end_time - start_time
+        if delta <= timedelta(hours=24):
+            return "today_solar_data"
+        if delta <= timedelta(days=30):
+            return "current_month_solar_data"
+        return "solar_data"
+
+    def _serialize_doc(self, doc):
+        return {
+            "id": str(doc.get("_id")),
+            "device_id": doc.get("client_id"),
+            "timestamp": doc.get("timestamp"),
+            "payload": {
+                "current": doc.get("current"),
+                "power": doc.get("power"),
+                "energy_consumption": doc.get("energy_consumption"),
+            },
+        }
+
+
+@extend_schema(
+    parameters=[
+        *TIME_RANGE_PARAMETERS,
+        OpenApiParameter(
+            name="device_id",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="Filter by device_id",
+        ),
+    ],
+    responses={200: GeneratorDataSerializer},
+)
+class GeneratorDataListView(APIView):
+    pagination_class = MongoPageNumberPagination
+
+    def get(self, request, *args, **kwargs):
+        start_time, end_time = get_time_range(request)
+        if (start_time is None) != (end_time is None):
+            raise ValidationError({"detail": "start_time and end_time must be provided together"})
+
+        query = {}
+        device_id = request.query_params.get("device_id")
+        if device_id:
+            query["device_id"] = device_id
+        if start_time and end_time:
+            query["timestamp"] = {"$gte": start_time, "$lte": end_time}
+
+        db = get_mongo_database()
+        paginator = self.pagination_class()
+        page_size = paginator.get_page_size(request)
+        page_number = int(paginator.get_page_number(request, None))
+        offset = (page_number - 1) * page_size
+
+        cursor = (
+            db["generator_data"]
+            .find(query)
+            .sort("timestamp", 1)
+            .skip(offset)
+            .limit(page_size)
+        )
+        items = [self._serialize_doc(doc) for doc in cursor]
+        total_count = db["generator_data"].count_documents(query)
+        paginator.paginate_mongo(request, total_count=total_count, items=items)
+        return paginator.get_paginated_response(items)
 
     def _serialize_doc(self, doc):
         return {
