@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import pymongo
 
 from common.mongo import get_mongo_database
-from apps.telemetry.services import broadcast_realtime
+from apps.telemetry.services import broadcast_realtime, mark_device_seen
 from services.tcp.schemas import SolarDataPayload
 
 logger = logging.getLogger("tcp.server")
@@ -165,6 +165,10 @@ class TCPSocketServer:
         except queue.Full:
             logger.warning("tcp queue full; dropping payload for %s", client_id)
             return
+        try:
+            mark_device_seen(client_id, topic="TCP_SOLAR_DATA")
+        except Exception as exc:
+            logger.warning("device status update failed: %s", exc)
         with self._metrics_lock:
             self._metrics["messages_queued"] += 1
         try:

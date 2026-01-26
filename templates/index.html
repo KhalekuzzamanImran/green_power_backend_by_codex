@@ -19,6 +19,9 @@
         font-family: "Courier New", Courier, monospace;
         background: radial-gradient(circle at 20% 20%, #1b2430, #0b0d10 60%);
         color: var(--text);
+        min-height: 100vh;
+        height: 100vh;
+        overflow: hidden;
       }
       header {
         padding: 20px 24px;
@@ -42,6 +45,7 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 16px;
         padding: 20px 24px 28px;
+        height: calc(100vh - 170px);
       }
       @media (max-width: 900px) {
         .grid {
@@ -59,6 +63,42 @@
         margin: 0 0 10px 0;
         font-size: 14px;
         color: var(--accent);
+      }
+      .card.fill {
+        height: calc(100vh - 170px);
+        overflow: hidden;
+      }
+      #mqtt-topics {
+        height: calc(100vh - 260px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding-bottom: 8px;
+      }
+      .topic-card {
+        flex: 1 1 0;
+        min-height: 140px;
+        border: 1px solid #232a36;
+        border-radius: 10px;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: #10151d;
+        box-sizing: border-box;
+      }
+      .topic-card pre {
+        flex: 1;
+        margin: 0;
+      }
+      #mqtt-topics pre {
+        max-height: 180px;
+        overflow: auto;
+      }
+      .footer {
+        padding: 0 24px 12px;
+        margin-top: 10px;
       }
       .kv {
         display: grid;
@@ -83,7 +123,7 @@
         max-height: 380px;
       }
       .footer {
-        padding: 0 24px 24px;
+        padding: 0 0px 24px;
         color: var(--muted);
         font-size: 12px;
       }
@@ -105,42 +145,72 @@
     </header>
 
     <section class="grid">
-      <div class="card">
-        <h2>MQTT Latest</h2>
-        <div class="kv" id="mqtt-summary"></div>
+      <div>
+        <div class="card fill">
+        <h2>MQTT Topics Payload</h2>
+        <div id="mqtt-topics"></div>
       </div>
-      <div class="card">
-        <h2>MQTT Payload</h2>
-        <pre id="mqtt-payload"></pre>
+      <div class="footer">WebSocket: <code id="ws-url"></code></div>
       </div>
-      <div class="card">
-        <h2>TCP Latest</h2>
-        <div class="kv" id="tcp-summary"></div>
-      </div>
-      <div class="card">
-        <h2>TCP Payload</h2>
+      <div>
+        <div class="card fill">
+        <h2>TCP Solar Payload</h2>
         <pre id="tcp-payload"></pre>
       </div>
+      <div class="footer">WebSocket: <code id="tcp-ws-url"></code></div>
+      </div>
     </section>
-
-    <div class="footer">WebSocket: <code id="ws-url"></code></div>
 
     <script>
       const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
       const wsTelemetryUrl = `${wsProtocol}://${location.host}/ws/telemetry/`;
       const wsTcpUrl = `${wsProtocol}://${location.host}/ws/tcp/`;
-      document.getElementById("ws-url").textContent = `${wsTelemetryUrl} | ${wsTcpUrl}`;
+      document.getElementById("ws-url").textContent = `${wsTelemetryUrl}`;
+      const tcpFooter = document.getElementById("tcp-ws-url");
+      if (tcpFooter) tcpFooter.textContent = wsTcpUrl;
 
       const stateEl = document.getElementById("ws-state");
       const infoEl = document.getElementById("ws-info");
-      const mqttSummaryEl = document.getElementById("mqtt-summary");
-      const mqttPayloadEl = document.getElementById("mqtt-payload");
-      const tcpSummaryEl = document.getElementById("tcp-summary");
+      const mqttTopicsEl = document.getElementById("mqtt-topics");
       const tcpPayloadEl = document.getElementById("tcp-payload");
+      let tcpStatus = "waiting";
+
+      const staleSeconds = {
+        "MQTT_RT_DATA": 60,
+        "CCCL/PURBACHAL/ENV_01": 60,
+        "MQTT_ENY_NOW": 1020,
+      };
+      const lastSeen = new Map();
+      const deviceStatus = new Map();
+      let currentTopic = null;
+      let currentDeviceId = null;
+      const mqttLatest = new Map();
+      const topicStates = new Map([
+        ["MQTT_RT_DATA", { status: "waiting" }],
+        ["MQTT_ENY_NOW", { status: "waiting" }],
+        ["CCCL/PURBACHAL/ENV_01", { status: "waiting" }],
+      ]);
 
       function setState(text, color) {
         stateEl.textContent = text;
         stateEl.style.color = color;
+      }
+
+      function formatAge(ms) {
+        const secs = Math.floor(ms / 1000);
+        if (secs < 60) return `${secs}s`;
+        const mins = Math.floor(secs / 60);
+        return `${mins}m`;
+      }
+
+      function setStaleUI(topic, lastTs) {
+        infoEl.textContent = `Offline (${topic}) - last update ${formatAge(Date.now() - lastTs)} ago`;
+        setState("offline", "#ff9f43");
+      }
+
+      function setWaitingUI() {
+        infoEl.textContent = "Waiting for data...";
+        setState("waiting", "#9aa4b2");
       }
 
       const ws = new WebSocket(wsTelemetryUrl);
@@ -148,7 +218,7 @@
 
       ws.onopen = () => {
         setState("connected", "#3ed4a7");
-        infoEl.textContent = "Listening for telemetry...";
+        infoEl.textContent = "WebSocket connected. Waiting for data...";
       };
 
       ws.onclose = () => {
@@ -170,27 +240,123 @@
           return;
         }
 
-        mqttSummaryEl.innerHTML = "";
-        const entries = [
-          ["device_id", data.device_id],
-          ["topic", data.topic],
-          ["timestamp", data.timestamp],
-        ];
-        for (const [label, value] of entries) {
-          const key = document.createElement("span");
-          key.textContent = label;
-          const val = document.createElement("strong");
-          val.textContent = value ?? "-";
-          mqttSummaryEl.appendChild(key);
-          mqttSummaryEl.appendChild(val);
+        if (data.type === "device_status") {
+          if (data.topic === "TCP_SOLAR_DATA") {
+            tcpStatus = data.status || "waiting";
+            if (tcpStatus === "offline") {
+              tcpPayloadEl.textContent = "Stale data (device offline)";
+            } else if (tcpStatus === "online" && tcpPayloadEl.textContent === "") {
+              tcpPayloadEl.textContent = "Waiting for data...";
+            }
+            return;
+          }
+          const key = `${data.topic || "unknown"}::${data.device_id || "unknown"}`;
+          if (data.last_seen) {
+            lastSeen.set(key, data.last_seen * 1000);
+          }
+          deviceStatus.set(key, data.status);
+          if (data.topic) {
+            currentTopic = data.topic;
+          }
+          if (data.device_id) {
+            currentDeviceId = data.device_id;
+          }
+          if (data.topic) {
+            topicStates.set(data.topic, {
+              status: data.status || "waiting",
+              device_id: data.device_id,
+              last_seen: data.last_seen ? data.last_seen * 1000 : null,
+            });
+            renderMqttTopics();
+          }
+          if (data.status === "offline") {
+            setStaleUI(data.topic || "unknown", (data.last_seen || Math.floor(Date.now() / 1000)) * 1000);
+          }
+          return;
         }
 
-        mqttPayloadEl.textContent = JSON.stringify(data.payload || {}, null, 2);
-        infoEl.textContent = `Last update: ${new Date().toISOString()}`;
+        if (data.topic) {
+          mqttLatest.set(data.topic, data);
+          const existing = topicStates.get(data.topic) || { status: "waiting" };
+          const key = `${data.topic}::${data.device_id || "unknown"}`;
+          const status = deviceStatus.get(key) || existing.status || "waiting";
+          topicStates.set(data.topic, {
+            ...existing,
+            status,
+            device_id: data.device_id,
+            last_seen: Date.now(),
+          });
+          renderMqttTopics();
+        }
+        currentTopic = data.topic || currentTopic;
+        currentDeviceId = data.device_id || currentDeviceId;
+        const key = `${currentTopic || "unknown"}::${currentDeviceId || "unknown"}`;
+        if (deviceStatus.get(key) === "offline") {
+          setStaleUI(currentTopic || "unknown", lastSeen.get(key) || Date.now());
+        } else {
+        // keep header status stable; no last-update line
+        }
       };
 
+      function renderMqttTopics() {
+        mqttTopicsEl.innerHTML = "";
+        const topics = new Set(["MQTT_RT_DATA", "MQTT_ENY_NOW", "CCCL/PURBACHAL/ENV_01"]);
+        for (const topic of topics) {
+          const msg = mqttLatest.get(topic);
+          const state = topicStates.get(topic) || { status: "waiting" };
+          const wrapper = document.createElement("div");
+          wrapper.className = "topic-card";
+
+          const title = document.createElement("div");
+          title.style.fontSize = "12px";
+          title.style.color = "var(--accent)";
+          let rawStatus = state.status || "waiting";
+          if (rawStatus === "waiting" && msg) {
+            rawStatus = "online";
+          }
+          const statusText =
+            rawStatus === "online"
+              ? "waiting for next data"
+              : rawStatus === "offline"
+              ? "offline"
+              : "waiting";
+          const statusColor =
+            rawStatus === "online" ? "#3ed4a7" : rawStatus === "offline" ? "#ff9f43" : "#9aa4b2";
+          title.innerHTML = `${topic} <span style=\"color:${statusColor}\">(${statusText})</span>`;
+
+          const kv = document.createElement("div");
+          kv.className = "kv";
+          const entries = [
+            ["device_id", msg?.device_id ?? state.device_id],
+            ["timestamp", msg?.timestamp],
+          ];
+          for (const [label, value] of entries) {
+            const key = document.createElement("span");
+            key.textContent = label;
+            const val = document.createElement("strong");
+            val.textContent = value ?? "-";
+            kv.appendChild(key);
+            kv.appendChild(val);
+          }
+
+          const pre = document.createElement("pre");
+          if (!msg) {
+            pre.textContent = rawStatus === "offline" ? "Stale data (device offline)" : "Waiting for data...";
+          } else if (rawStatus === "offline") {
+            pre.textContent = "Stale data (device offline)";
+          } else {
+            pre.textContent = JSON.stringify(msg.payload || {}, null, 2);
+          }
+
+          wrapper.appendChild(title);
+          wrapper.appendChild(kv);
+          wrapper.appendChild(pre);
+          mqttTopicsEl.appendChild(wrapper);
+        }
+      }
+
       tcpWs.onopen = () => {
-        infoEl.textContent = "Listening for telemetry + TCP...";
+        // keep header status stable; no last-update line
       };
 
       tcpWs.onclose = () => {
@@ -210,24 +376,15 @@
           return;
         }
 
-        tcpSummaryEl.innerHTML = "";
-        const entries = [
-          ["device_id", data.device_id],
-          ["topic", data.topic],
-          ["timestamp", data.timestamp],
-        ];
-        for (const [label, value] of entries) {
-          const key = document.createElement("span");
-          key.textContent = label;
-          const val = document.createElement("strong");
-          val.textContent = value ?? "-";
-          tcpSummaryEl.appendChild(key);
-          tcpSummaryEl.appendChild(val);
-        }
-
         tcpPayloadEl.textContent = JSON.stringify(data.payload || {}, null, 2);
-        infoEl.textContent = `Last TCP update: ${new Date().toISOString()}`;
+        tcpStatus = "online";
+        // keep header status stable; no last-update line
       };
+
+      if (tcpPayloadEl.textContent === "") {
+        tcpPayloadEl.textContent = "Waiting for data...";
+      }
+      // Stale state is driven by backend device_status messages only.
     </script>
   </body>
 </html>

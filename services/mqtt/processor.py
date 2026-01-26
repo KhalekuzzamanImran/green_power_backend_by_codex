@@ -9,7 +9,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass
 
-from apps.telemetry.services import broadcast_realtime, store_event_mongo
+from apps.telemetry.services import broadcast_realtime, mark_device_seen, store_event_mongo
 from apps.telemetry.schemas import GeneratorDataModel
 from apps.telemetry.validators import validate_packet
 
@@ -93,6 +93,15 @@ class MessageProcessor:
                 logger.warning("invalid packet dropped: %s", exc)
                 self._queue.task_done()
                 continue
+            device_id = message.get("device_id")
+            if not device_id and message.get("topic") == "CCCL/PURBACHAL/ENV_01":
+                device_id = "CCCL_ENVIRONMENT_DEVICE_1"
+                message["device_id"] = device_id
+            if device_id:
+                try:
+                    mark_device_seen(device_id, topic=message.get("topic"))
+                except Exception as exc:
+                    logger.warning("device status update failed: %s", exc)
             futures = [
                 self._executor.submit(store_event_mongo, message),
                 self._executor.submit(broadcast_realtime, message),

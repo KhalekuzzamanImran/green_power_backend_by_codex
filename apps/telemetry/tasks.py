@@ -7,6 +7,8 @@ from django.conf import settings
 from django.utils import timezone
 
 from common.mongo import get_mongo_database
+from common.redis_client import get_redis
+from apps.telemetry.services import broadcast_device_status
 
 
 def _coerce_number(value):
@@ -337,3 +339,33 @@ def aggregate_eny_now_data_six_hours() -> None:
         window_end=window_end,
         default_topic="MQTT_ENY_NOW",
     )
+
+
+@shared_task
+def emit_device_offline_status() -> None:
+    redis = get_redis()
+    now_ts = int(timezone.now().timestamp())
+    thresholds = {
+        "MQTT_RT_DATA": int(getattr(settings, "TELEMETRY_RT_STALE_SECONDS", 60)),
+        "CCCL/PURBACHAL/ENV_01": int(getattr(settings, "TELEMETRY_ENV_STALE_SECONDS", 60)),
+        "MQTT_ENY_NOW": int(getattr(settings, "TELEMETRY_ENY_NOW_STALE_SECONDS", 1020)),
+        "TCP_SOLAR_DATA": int(getattr(settings, "TELEMETRY_SOLAR_STALE_SECONDS", 150)),
+    }
+    device_ids = redis.smembers("telemetry:devices")
+    for device_id in device_ids:
+        for topic, threshold in thresholds.items():
+            last_seen = redis.get(f"telemetry:last_seen:{topic}:{device_id}")
+            if last_seen is None:
+                continue
+            try:
+                last_seen_ts = int(last_seen)
+            except (TypeError, ValueError):
+                continue
+            if now_ts - last_seen_ts <= threshold:
+                continue
+            status_key = f"telemetry:status:{topic}:{device_id}"
+            prev = redis.get(status_key)
+            if prev == "offline":
+                continue
+            redis.set(status_key, "offline")
+            broadcast_device_status(device_id, "offline", last_seen=last_seen_ts, topic=topic)

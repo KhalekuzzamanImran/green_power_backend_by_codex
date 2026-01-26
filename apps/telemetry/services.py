@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from common.mongo import get_mongo_database
+from common.redis_client import get_redis
 
 
 def _normalize_timestamp(value):
@@ -46,6 +47,32 @@ def store_event_mongo(message: dict) -> None:
     for collection in collections:
         db[collection].insert_one(payload)
     db["telemetry_events"].insert_one(dict(payload))
+
+
+def mark_device_seen(device_id: str, *, topic: str | None = None) -> None:
+    if not device_id:
+        return
+    redis = get_redis()
+    now_ts = int(timezone.now().timestamp())
+    topic_key = topic or "unknown"
+    redis.set(f"telemetry:last_seen:{topic_key}:{device_id}", now_ts)
+    redis.sadd("telemetry:devices", device_id)
+    status_key = f"telemetry:status:{topic_key}:{device_id}"
+    prev = redis.get(status_key)
+    if prev != "online":
+        redis.set(status_key, "online")
+        broadcast_device_status(device_id, "online", last_seen=now_ts, topic=topic)
+
+
+def broadcast_device_status(device_id: str, status: str, *, last_seen: int | None = None, topic: str | None = None) -> None:
+    message = {
+        "type": "device_status",
+        "device_id": device_id,
+        "status": status,
+        "last_seen": last_seen,
+        "topic": topic,
+    }
+    broadcast_realtime(message, event="telemetry.status")
 
 
 def _collections_for_topic(topic: str | None) -> list[str]:

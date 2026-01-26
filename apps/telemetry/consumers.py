@@ -18,6 +18,9 @@ class TelemetryConsumer(AsyncJsonWebsocketConsumer):
     async def telemetry_message(self, event):
         await self.send_json(event["message"])
 
+    async def telemetry_status(self, event):
+        await self.send_json(event["message"])
+
 
 class TCPConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):

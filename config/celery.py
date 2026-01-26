@@ -64,4 +64,8 @@ app.conf.beat_schedule = {
         "task": "apps.telemetry.tasks.aggregate_eny_now_data_six_hours",
         "schedule": crontab(minute=0, hour="*/6"),
     },
+    "telemetry-device-offline-check": {
+        "task": "apps.telemetry.tasks.emit_device_offline_status",
+        "schedule": crontab(minute="*"),
+    },
 }
