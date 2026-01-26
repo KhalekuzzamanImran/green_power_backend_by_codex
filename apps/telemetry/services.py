@@ -88,10 +88,6 @@ def ensure_today_collection_ttl_indexes() -> None:
     base_collections = [
         "grid_rt_data",
         "grid_eny_now_data",
-        "last_7_days_grid_eny_now_data",
-        "last_30_days_grid_eny_now_data",
-        "last_6_months_grid_eny_now_data",
-        "this_year_grid_eny_now_data",
         "grid_day_data",
         "grid_eny_frz_data",
         "environment_data",

@@ -347,7 +347,7 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/telemetry/rt-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T12:00:00Z&page=1&page_size=50",
+              "raw": "{{base_url}}/api/telemetry/rt-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50",
               "host": [
                 "{{base_url}}"
               ],
@@ -363,7 +363,7 @@
                 },
                 {
                   "key": "end_time",
-                  "value": "2026-01-26T12:00:00Z"
+                  "value": "2026-01-26T23:59:59Z"
                 },
                 {
                   "key": "page",
@@ -382,7 +382,7 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/telemetry/eny-now-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T12:00:00Z&page=1&page_size=50",
+              "raw": "{{base_url}}/api/telemetry/eny-now-data/?start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50",
               "host": [
                 "{{base_url}}"
               ],
@@ -398,7 +398,7 @@
                 },
                 {
                   "key": "end_time",
-                  "value": "2026-01-26T12:00:00Z"
+                  "value": "2026-01-26T23:59:59Z"
                 },
                 {
                   "key": "page",
@@ -417,7 +417,7 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/telemetry/events/?topic=MQTT_RT_DATA&start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T12:00:00Z&page=1&page_size=50",
+              "raw": "{{base_url}}/api/telemetry/events/?topic=MQTT_RT_DATA&start_time=2026-01-26T00:00:00Z&end_time=2026-01-26T23:59:59Z&page=1&page_size=50",
               "host": [
                 "{{base_url}}"
               ],
@@ -437,7 +437,7 @@
                 },
                 {
                   "key": "end_time",
-                  "value": "2026-01-26T12:00:00Z"
+                  "value": "2026-01-26T23:59:59Z"
                 },
                 {
                   "key": "page",

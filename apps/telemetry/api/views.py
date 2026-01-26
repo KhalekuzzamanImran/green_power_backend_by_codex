@@ -20,6 +20,42 @@ from .serializers import (
 )
 
 
+class MongoPageNumberPagination(PageNumberPagination):
+    page_size_query_param = "page_size"
+    max_page_size = 1000
+
+    def paginate_mongo(self, request, *, total_count, items):
+        self.request = request
+        self.count = total_count
+        self.page_size = self.get_page_size(request)
+        self.page_number = int(self.get_page_number(request, None))
+        return items
+
+    def get_next_link(self):
+        if self.page_size is None:
+            return None
+        if self.page_number * self.page_size >= self.count:
+            return None
+        url = self.request.build_absolute_uri()
+        return replace_query_param(url, self.page_query_param, self.page_number + 1)
+
+    def get_previous_link(self):
+        if self.page_number <= 1:
+            return None
+        url = self.request.build_absolute_uri()
+        return replace_query_param(url, self.page_query_param, self.page_number - 1)
+
+    def get_paginated_response(self, data):
+        return Response(
+            {
+                "count": self.count,
+                "next": self.get_next_link(),
+                "previous": self.get_previous_link(),
+                "results": data,
+            }
+        )
+
+
 @extend_schema(
     parameters=[
         *TIME_RANGE_PARAMETERS,
@@ -50,7 +86,7 @@ class TelemetryEventListView(APIView):
         db = get_mongo_database()
         paginator = self.pagination_class()
         page_size = paginator.get_page_size(request)
-        page_number = paginator.get_page_number(request, None)
+        page_number = int(paginator.get_page_number(request, None))
         offset = (page_number - 1) * page_size
 
         cursor = (
@@ -75,42 +111,6 @@ class TelemetryEventListView(APIView):
         }
 
 
-class MongoPageNumberPagination(PageNumberPagination):
-    page_size_query_param = "page_size"
-    max_page_size = 1000
-
-    def paginate_mongo(self, request, *, total_count, items):
-        self.request = request
-        self.count = total_count
-        self.page_size = self.get_page_size(request)
-        self.page_number = self.get_page_number(request, None)
-        return items
-
-    def get_next_link(self):
-        if self.page_size is None:
-            return None
-        if self.page_number * self.page_size >= self.count:
-            return None
-        url = self.request.build_absolute_uri()
-        return replace_query_param(url, self.page_query_param, self.page_number + 1)
-
-    def get_previous_link(self):
-        if self.page_number <= 1:
-            return None
-        url = self.request.build_absolute_uri()
-        return replace_query_param(url, self.page_query_param, self.page_number - 1)
-
-    def get_paginated_response(self, data):
-        return Response(
-            {
-                "count": self.count,
-                "next": self.get_next_link(),
-                "previous": self.get_previous_link(),
-                "results": data,
-            }
-        )
-
-
 @extend_schema(parameters=TIME_RANGE_PARAMETERS, responses={200: RTDataSerializer})
 class RTDataListView(APIView):
     pagination_class = MongoPageNumberPagination
@@ -128,7 +128,7 @@ class RTDataListView(APIView):
         db = get_mongo_database()
         paginator = self.pagination_class()
         page_size = paginator.get_page_size(request)
-        page_number = paginator.get_page_number(request, None)
+        page_number = int(paginator.get_page_number(request, None))
         offset = (page_number - 1) * page_size
 
         cursor = (
@@ -185,7 +185,7 @@ class EnyNowDataListView(APIView):
         db = get_mongo_database()
         paginator = self.pagination_class()
         page_size = paginator.get_page_size(request)
-        page_number = paginator.get_page_number(request, None)
+        page_number = int(paginator.get_page_number(request, None))
         offset = (page_number - 1) * page_size
 
         cursor = (
