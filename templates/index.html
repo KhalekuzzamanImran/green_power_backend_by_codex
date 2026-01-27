@@ -48,8 +48,27 @@
         height: calc(100vh - 170px);
       }
       @media (max-width: 900px) {
+        body {
+          height: auto;
+          overflow: auto;
+        }
         .grid {
           grid-template-columns: 1fr;
+          height: auto;
+          padding-bottom: 60px;
+        }
+        .card.fill {
+          height: auto;
+          overflow: visible;
+        }
+        #mqtt-topics {
+          height: auto;
+          max-height: 70vh;
+          overflow: auto;
+        }
+        #tcp-payload {
+          max-height: 60vh;
+          overflow: auto;
         }
       }
       .card {
@@ -69,7 +88,7 @@
         overflow: hidden;
       }
       #mqtt-topics {
-        height: calc(100vh - 260px);
+        height: calc(100vh - 220px);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -96,10 +115,6 @@
         max-height: 180px;
         overflow: auto;
       }
-      .footer {
-        padding: 0 24px 12px;
-        margin-top: 10px;
-      }
       .kv {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -123,7 +138,8 @@
         max-height: 380px;
       }
       .footer {
-        padding: 0 0px 24px;
+        padding: 0 24px 12px;
+        margin-top: 10px;
         color: var(--muted);
         font-size: 12px;
       }
