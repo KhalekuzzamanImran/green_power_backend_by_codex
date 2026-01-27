@@ -5,10 +5,22 @@ from datetime import timedelta
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
+from pymongo.errors import PyMongoError
 
 from common.mongo import get_mongo_database
 from common.redis_client import get_redis
-from apps.telemetry.services import broadcast_device_status
+from apps.telemetry.services import broadcast_device_status, store_event_mongo
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(PyMongoError,),
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 10},
+)
+def store_event_mongo_task(self, message: dict) -> None:
+    store_event_mongo(message)
 
 
 def _coerce_number(value):
@@ -345,27 +357,27 @@ def aggregate_eny_now_data_six_hours() -> None:
 def emit_device_offline_status() -> None:
     redis = get_redis()
     now_ts = int(timezone.now().timestamp())
+    track_ttl = int(getattr(settings, "TELEMETRY_DEVICE_TRACK_SECONDS", 86400))
     thresholds = {
         "MQTT_RT_DATA": int(getattr(settings, "TELEMETRY_RT_STALE_SECONDS", 60)),
         "CCCL/PURBACHAL/ENV_01": int(getattr(settings, "TELEMETRY_ENV_STALE_SECONDS", 60)),
         "MQTT_ENY_NOW": int(getattr(settings, "TELEMETRY_ENY_NOW_STALE_SECONDS", 1020)),
         "TCP_SOLAR_DATA": int(getattr(settings, "TELEMETRY_SOLAR_STALE_SECONDS", 150)),
     }
-    device_ids = redis.smembers("telemetry:devices")
-    for device_id in device_ids:
-        for topic, threshold in thresholds.items():
-            last_seen = redis.get(f"telemetry:last_seen:{topic}:{device_id}")
-            if last_seen is None:
+    for topic, threshold in thresholds.items():
+        zset_key = f"telemetry:devices:{topic}"
+        if track_ttl > 0:
+            redis.zremrangebyscore(zset_key, 0, now_ts - track_ttl)
+        offline_cutoff = now_ts - threshold
+        offline_devices = redis.zrangebyscore(zset_key, 0, offline_cutoff)
+        for device_id in offline_devices:
+            last_seen_ts = redis.zscore(zset_key, device_id)
+            if last_seen_ts is None:
                 continue
-            try:
-                last_seen_ts = int(last_seen)
-            except (TypeError, ValueError):
-                continue
-            if now_ts - last_seen_ts <= threshold:
-                continue
+            last_seen_int = int(last_seen_ts)
             status_key = f"telemetry:status:{topic}:{device_id}"
             prev = redis.get(status_key)
             if prev == "offline":
                 continue
-            redis.set(status_key, "offline")
-            broadcast_device_status(device_id, "offline", last_seen=last_seen_ts, topic=topic)
+            redis.set(status_key, "offline", ex=track_ttl)
+            broadcast_device_status(device_id, "offline", last_seen=last_seen_int, topic=topic)

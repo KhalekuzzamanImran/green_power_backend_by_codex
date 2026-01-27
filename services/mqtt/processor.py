@@ -9,7 +9,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass
 
-from apps.telemetry.services import broadcast_realtime, mark_device_seen, store_event_mongo
+from apps.telemetry.services import broadcast_realtime, mark_device_seen
+from apps.telemetry.tasks import store_event_mongo_task
 from apps.telemetry.schemas import GeneratorDataModel
 from apps.telemetry.validators import validate_packet
 
@@ -102,11 +103,14 @@ class MessageProcessor:
                     mark_device_seen(device_id, topic=message.get("topic"))
                 except Exception as exc:
                     logger.warning("device status update failed: %s", exc)
-            futures = [
-                self._executor.submit(store_event_mongo, message),
-                self._executor.submit(broadcast_realtime, message),
-            ]
-            done, not_done = wait(futures, timeout=self._fanout_timeout)
+            try:
+                store_event_mongo_task.delay(message)
+            except Exception as exc:
+                with self._metrics_lock:
+                    self._metrics["fanout_errors"] += 1
+                logger.exception("mongo enqueue error: %s", exc)
+            future = self._executor.submit(broadcast_realtime, message)
+            done, not_done = wait([future], timeout=self._fanout_timeout)
             for future in done:
                 try:
                     future.result()

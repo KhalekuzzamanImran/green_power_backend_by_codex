@@ -1,15 +1,14 @@
 from datetime import timedelta
 
+from django.conf import settings
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
 from rest_framework.utils.urls import replace_query_param
 
-from apps.telemetry.models import TelemetryEvent
-from common.api.time_range import TIME_RANGE_PARAMETERS, TimeRangeFilterMixin, get_time_range
+from common.api.time_range import TIME_RANGE_PARAMETERS, get_time_range
 from common.mongo import get_mongo_database
 
 from .serializers import (
@@ -19,19 +18,29 @@ from .serializers import (
     RTDataSerializer,
     SolarDataSerializer,
     TelemetryEventMongoSerializer,
-    TelemetryEventSerializer,
 )
 
 
 class MongoPageNumberPagination(PageNumberPagination):
+    page_size = settings.REST_FRAMEWORK.get("PAGE_SIZE", 50)
     page_size_query_param = "page_size"
     max_page_size = 1000
+
+    def get_page_number_int(self, request) -> int:
+        page_number = self.get_page_number(request, None)
+        try:
+            page_number = int(page_number)
+        except (TypeError, ValueError):
+            raise ValidationError({"page": "Invalid page number."})
+        if page_number < 1:
+            raise ValidationError({"page": "Page number must be >= 1."})
+        return page_number
 
     def paginate_mongo(self, request, *, total_count, items):
         self.request = request
         self.count = total_count
-        self.page_size = self.get_page_size(request)
-        self.page_number = int(self.get_page_number(request, None))
+        self.page_size = self.get_page_size(request) or self.page_size
+        self.page_number = self.get_page_number_int(request)
         return items
 
     def get_next_link(self):
@@ -77,10 +86,11 @@ class MongoPageNumberPagination(PageNumberPagination):
     ],
     responses={200: TelemetryEventMongoSerializer},
 )
-class TelemetryEventListView(APIView):
+class TelemetryEventListView(ListAPIView):
     pagination_class = MongoPageNumberPagination
+    serializer_class = TelemetryEventMongoSerializer
 
-    def get(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         start_time, end_time = get_time_range(request)
         if (start_time is None) != (end_time is None):
             raise ValidationError({"detail": "start_time and end_time must be provided together"})
@@ -97,8 +107,8 @@ class TelemetryEventListView(APIView):
 
         db = get_mongo_database()
         paginator = self.pagination_class()
-        page_size = paginator.get_page_size(request)
-        page_number = int(paginator.get_page_number(request, None))
+        page_size = paginator.get_page_size(request) or paginator.page_size
+        page_number = paginator.get_page_number_int(request)
         offset = (page_number - 1) * page_size
 
         cursor = (
@@ -135,10 +145,11 @@ class TelemetryEventListView(APIView):
     ],
     responses={200: RTDataSerializer},
 )
-class RTDataListView(APIView):
+class RTDataListView(ListAPIView):
     pagination_class = MongoPageNumberPagination
+    serializer_class = RTDataSerializer
 
-    def get(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         start_time, end_time = get_time_range(request)
         if (start_time is None) != (end_time is None):
             raise ValidationError({"detail": "start_time and end_time must be provided together"})
@@ -153,8 +164,8 @@ class RTDataListView(APIView):
 
         db = get_mongo_database()
         paginator = self.pagination_class()
-        page_size = paginator.get_page_size(request)
-        page_number = int(paginator.get_page_number(request, None))
+        page_size = paginator.get_page_size(request) or paginator.page_size
+        page_number = paginator.get_page_number_int(request)
         offset = (page_number - 1) * page_size
 
         cursor = (
@@ -206,10 +217,11 @@ class RTDataListView(APIView):
     ],
     responses={200: EnyNowDataSerializer},
 )
-class EnyNowDataListView(APIView):
+class EnyNowDataListView(ListAPIView):
     pagination_class = MongoPageNumberPagination
+    serializer_class = EnyNowDataSerializer
 
-    def get(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         start_time, end_time = get_time_range(request)
         if (start_time is None) != (end_time is None):
             raise ValidationError({"detail": "start_time and end_time must be provided together"})
@@ -224,8 +236,8 @@ class EnyNowDataListView(APIView):
 
         db = get_mongo_database()
         paginator = self.pagination_class()
-        page_size = paginator.get_page_size(request)
-        page_number = int(paginator.get_page_number(request, None))
+        page_size = paginator.get_page_size(request) or paginator.page_size
+        page_number = paginator.get_page_number_int(request)
         offset = (page_number - 1) * page_size
 
         cursor = (
@@ -277,10 +289,11 @@ class EnyNowDataListView(APIView):
     ],
     responses={200: EnvironmentDataSerializer},
 )
-class EnvironmentDataListView(APIView):
+class EnvironmentDataListView(ListAPIView):
     pagination_class = MongoPageNumberPagination
+    serializer_class = EnvironmentDataSerializer
 
-    def get(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         start_time, end_time = get_time_range(request)
         if (start_time is None) != (end_time is None):
             raise ValidationError({"detail": "start_time and end_time must be provided together"})
@@ -295,8 +308,8 @@ class EnvironmentDataListView(APIView):
 
         db = get_mongo_database()
         paginator = self.pagination_class()
-        page_size = paginator.get_page_size(request)
-        page_number = int(paginator.get_page_number(request, None))
+        page_size = paginator.get_page_size(request) or paginator.page_size
+        page_number = paginator.get_page_number_int(request)
         offset = (page_number - 1) * page_size
 
         cursor = (
@@ -348,10 +361,11 @@ class EnvironmentDataListView(APIView):
     ],
     responses={200: SolarDataSerializer},
 )
-class SolarDataListView(APIView):
+class SolarDataListView(ListAPIView):
     pagination_class = MongoPageNumberPagination
+    serializer_class = SolarDataSerializer
 
-    def get(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         start_time, end_time = get_time_range(request)
         if (start_time is None) != (end_time is None):
             raise ValidationError({"detail": "start_time and end_time must be provided together"})
@@ -366,8 +380,8 @@ class SolarDataListView(APIView):
 
         db = get_mongo_database()
         paginator = self.pagination_class()
-        page_size = paginator.get_page_size(request)
-        page_number = int(paginator.get_page_number(request, None))
+        page_size = paginator.get_page_size(request) or paginator.page_size
+        page_number = paginator.get_page_number_int(request)
         offset = (page_number - 1) * page_size
 
         cursor = (
@@ -418,10 +432,11 @@ class SolarDataListView(APIView):
     ],
     responses={200: GeneratorDataSerializer},
 )
-class GeneratorDataListView(APIView):
+class GeneratorDataListView(ListAPIView):
     pagination_class = MongoPageNumberPagination
+    serializer_class = GeneratorDataSerializer
 
-    def get(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         start_time, end_time = get_time_range(request)
         if (start_time is None) != (end_time is None):
             raise ValidationError({"detail": "start_time and end_time must be provided together"})
@@ -435,8 +450,8 @@ class GeneratorDataListView(APIView):
 
         db = get_mongo_database()
         paginator = self.pagination_class()
-        page_size = paginator.get_page_size(request)
-        page_number = int(paginator.get_page_number(request, None))
+        page_size = paginator.get_page_size(request) or paginator.page_size
+        page_number = paginator.get_page_number_int(request)
         offset = (page_number - 1) * page_size
 
         cursor = (

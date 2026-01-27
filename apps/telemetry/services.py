@@ -41,12 +41,12 @@ def store_event_mongo(message: dict) -> None:
     if payload.get("topic") == "CCCL/PURBACHAL/ENV_01" and not payload.get("device_id"):
         payload["device_id"] = "CCCL_ENVIRONMENT_DEVICE_1"
     normalized_timestamp = _normalize_timestamp(payload.get("timestamp"))
-    if normalized_timestamp is not None:
-        payload["timestamp"] = normalized_timestamp
+    payload["timestamp"] = normalized_timestamp or timezone.now()
     collections = _collections_for_topic(payload.get("topic"))
     for collection in collections:
         db[collection].insert_one(payload)
-    db["telemetry_events"].insert_one(dict(payload))
+    if collections:
+        db["telemetry_events"].insert_one(dict(payload))
 
 
 def mark_device_seen(device_id: str, *, topic: str | None = None) -> None:
@@ -55,12 +55,15 @@ def mark_device_seen(device_id: str, *, topic: str | None = None) -> None:
     redis = get_redis()
     now_ts = int(timezone.now().timestamp())
     topic_key = topic or "unknown"
-    redis.set(f"telemetry:last_seen:{topic_key}:{device_id}", now_ts)
-    redis.sadd("telemetry:devices", device_id)
+    ttl_seconds = int(getattr(settings, "TELEMETRY_DEVICE_TRACK_SECONDS", 86400))
+    redis.set(f"telemetry:last_seen:{topic_key}:{device_id}", now_ts, ex=ttl_seconds)
+    zset_key = f"telemetry:devices:{topic_key}"
+    redis.zadd(zset_key, {device_id: now_ts})
+    redis.expire(zset_key, ttl_seconds)
     status_key = f"telemetry:status:{topic_key}:{device_id}"
     prev = redis.get(status_key)
     if prev != "online":
-        redis.set(status_key, "online")
+        redis.set(status_key, "online", ex=ttl_seconds)
         broadcast_device_status(device_id, "online", last_seen=now_ts, topic=topic)
 
 
@@ -92,7 +95,7 @@ def _collections_for_topic(topic: str | None) -> list[str]:
         return ["environment_data"]
     if topic == "CCCL/PURBACHAL/ENM_01":
         return ["generator_data"]
-    return [os.getenv("MONGO_TELEMETRY_COLLECTION", "telemetry_events")]
+    return []
 
 
 def _ensure_ttl_index(db, collection: str, *, ttl_seconds: int) -> None:

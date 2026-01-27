@@ -4,7 +4,7 @@ from pathlib import Path
 
 import environ
 
-BASE_DIR = Path(__file__).resolve().parents[3]
+BASE_DIR = Path(__file__).resolve().parents[2]
 _templates_dir = Path(os.getenv("DJANGO_TEMPLATES_DIR", BASE_DIR / "templates"))
 if not _templates_dir.exists():
     cwd_templates = Path.cwd() / "templates"
@@ -57,6 +57,7 @@ TELEMETRY_RT_STALE_SECONDS = env.int("TELEMETRY_RT_STALE_SECONDS", default=60)
 TELEMETRY_ENV_STALE_SECONDS = env.int("TELEMETRY_ENV_STALE_SECONDS", default=60)
 TELEMETRY_ENY_NOW_STALE_SECONDS = env.int("TELEMETRY_ENY_NOW_STALE_SECONDS", default=1020)
 TELEMETRY_SOLAR_STALE_SECONDS = env.int("TELEMETRY_SOLAR_STALE_SECONDS", default=150)
+TELEMETRY_DEVICE_TRACK_SECONDS = env.int("TELEMETRY_DEVICE_TRACK_SECONDS", default=86400)
 MONGO_TODAY_TTL_SECONDS = env.int("MONGO_TODAY_TTL_SECONDS")
 MONGO_LAST_7_DAYS_TTL_SECONDS = env.int("MONGO_LAST_7_DAYS_TTL_SECONDS")
 MONGO_LAST_30_DAYS_TTL_SECONDS = env.int("MONGO_LAST_30_DAYS_TTL_SECONDS")
@@ -182,8 +183,8 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=env.bool("SECURE_SSL_REDIRECT", default=False))
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=env.bool("SECURE_SSL_REDIRECT", default=False))
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
 

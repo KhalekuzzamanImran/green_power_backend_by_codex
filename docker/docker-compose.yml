@@ -10,11 +10,16 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
     depends_on:
-      - green_power_postgres
-      - green_power_redis
-      - green_power_mongodb
-    ports:
-      - "8000:8000"
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - staticfiles:/app/staticfiles
+      - mediafiles:/app/mediafiles
+    # backend is only exposed via nginx
 
   mqtt:
     build:
@@ -27,7 +32,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
     ports:
-      - "7002:7002"
+      - "7102:7002"
 
   tcp:
     build:
@@ -40,8 +45,8 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
     ports:
-      - "6000:6000"
-      - "7001:7001"
+      - "6100:6000"
+      - "7101:7001"
 
   celery_worker:
     build:
@@ -54,9 +59,9 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
     depends_on:
-      green_power_redis:
+      redis:
         condition: service_healthy
-      green_power_mongodb:
+      mongodb:
         condition: service_healthy
 
   celery_beat:
@@ -70,12 +75,12 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
     depends_on:
-      green_power_redis:
+      redis:
         condition: service_healthy
-      green_power_mongodb:
+      mongodb:
         condition: service_healthy
 
-  green_power_postgres:
+  postgres:
     image: postgres:16
     env_file:
       - ../.env
@@ -85,16 +90,27 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_DB_PASSWORD:?POSTGRES_DB_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_DB_USER} -d ${POSTGRES_DB_NAME} -h 127.0.0.1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  green_power_redis:
+  redis:
     image: redis:7
+    ports:
+      - "6479:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
 
-  green_power_mongodb:
+  mongodb:
     image: mongo:7
     env_file:
       - ../.env
@@ -105,7 +121,7 @@ services:
     volumes:
       - mongo_data:/data/db
     ports:
-      - "27017:27017"
+      - "27019:27017"
     healthcheck:
       test:
         [
@@ -123,6 +139,19 @@ services:
       timeout: 5s
       retries: 10
 
+  nginx:
+    image: nginx:1.27
+    depends_on:
+      - backend
+    ports:
+      - "8180:80"
+    volumes:
+      - ./nginx/green_power_backend.conf:/etc/nginx/conf.d/default.conf:ro
+      - staticfiles:/app/staticfiles:ro
+      - mediafiles:/app/mediafiles:ro
+
 volumes:
   postgres_data:
   mongo_data:
+  staticfiles:
+  mediafiles:
