@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.access_control.models import ClientProfile, OMClientAccess
+from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.accounts.models import RoleChoices, User
 from apps.clients.models import Client
 from apps.dashboards.models import ClientType, DashboardScope
@@ -38,7 +38,7 @@ class DeviceVisibilityTests(APITestCase):
             client_type=self.industry_type,
             dashboard_scope=self.scope,
         )
-        ClientProfile.objects.create(user=self.client_user, client=self.client_allowed)
+        UserClientAccess.objects.create(user=self.client_user, client=self.client_allowed)
         OMClientAccess.objects.create(om_user=self.om_user, client=self.client_allowed)
         self.device_allowed = Device.objects.create(
             client=self.client_allowed,
@@ -142,5 +142,46 @@ class DeviceVisibilityTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["topic_code"], "allowed.topic")
+
+    def test_multi_client_user_must_pass_client_id_for_devices(self):
+        second_client = Client.objects.create(
+            name="Second Allowed Client",
+            code="SECOND_ALLOWED",
+            client_type=self.grid_type,
+            dashboard_scope=self.scope,
+        )
+        UserClientAccess.objects.create(user=self.client_user, client=second_client)
+
+        refresh = RefreshToken.for_user(self.client_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.get("/api/v1/devices/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("client_id", response.data)
+
+    def test_multi_client_user_can_filter_devices_by_selected_client(self):
+        second_client = Client.objects.create(
+            name="Second Allowed Client",
+            code="SECOND_ALLOWED_2",
+            client_type=self.grid_type,
+            dashboard_scope=self.scope,
+        )
+        second_device = Device.objects.create(
+            client=second_client,
+            name="Second Device",
+            serial_number="SN-SECOND",
+            device_type=DeviceType.SOLAR,
+        )
+        UserClientAccess.objects.create(user=self.client_user, client=second_client)
+
+        refresh = RefreshToken.for_user(self.client_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.get(f"/api/v1/devices/?client_id={second_client.id}")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        serials = {row["serial_number"] for row in response.data}
+        self.assertEqual(serials, {second_device.serial_number})
 
 # Create your tests here.

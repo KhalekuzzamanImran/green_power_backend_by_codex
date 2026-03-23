@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.access_control.models import OMClientAccess
+from apps.access_control.selectors import get_accessible_clients_for_client_user, get_selected_client
 from apps.accounts.models import RoleChoices
 from apps.audit_logs.models import AuditAction, AuditLog
 from apps.clients.models import Client
@@ -25,8 +26,8 @@ class ClientViewSet(viewsets.ModelViewSet):
                 return queryset
             client_ids = OMClientAccess.objects.filter(om_user=user).values_list("client_id", flat=True)
             return queryset.filter(id__in=client_ids)
-        if user.role == RoleChoices.CLIENT and hasattr(user, "client_profile"):
-            return queryset.filter(id=user.client_profile.client_id)
+        if user.role == RoleChoices.CLIENT:
+            return get_accessible_clients_for_client_user(user)
         return queryset.none()
 
     def perform_create(self, serializer):
@@ -61,7 +62,15 @@ class ClientViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="my")
     def my_client(self, request):
-        if request.user.role != RoleChoices.CLIENT or not hasattr(request.user, "client_profile"):
-            return Response({"detail": "Client profile not available."}, status=404)
-        serializer = self.get_serializer(request.user.client_profile.client)
+        if request.user.role != RoleChoices.CLIENT:
+            return Response({"detail": "Client access not available."}, status=404)
+        client = get_selected_client(request.user, request.query_params.get("client_id"), require_selection=True)
+        serializer = self.get_serializer(client)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="my-clients")
+    def my_clients(self, request):
+        if request.user.role != RoleChoices.CLIENT:
+            return Response({"detail": "Client access not available."}, status=404)
+        serializer = self.get_serializer(get_accessible_clients_for_client_user(request.user), many=True)
         return Response(serializer.data)

@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.access_control.models import OMClientAccess
+from apps.access_control.selectors import get_selected_client
 from apps.accounts.models import RoleChoices
 from apps.audit_logs.models import AuditAction, AuditLog
 from apps.core.permissions import IsAdminOrReadOnly
@@ -11,7 +12,7 @@ from apps.devices.models import Device, Topic, TopicData
 from apps.devices.serializers import DeviceSerializer, TopicDataSerializer, TopicSerializer
 
 
-def get_accessible_devices(user):
+def get_accessible_devices(user, client_id=None, require_selection=False):
     queryset = Device.objects.select_related("client").all()
     if user.role == RoleChoices.ADMIN:
         return queryset
@@ -20,17 +21,26 @@ def get_accessible_devices(user):
             return queryset
         client_ids = OMClientAccess.objects.filter(om_user=user).values_list("client_id", flat=True)
         return queryset.filter(client_id__in=client_ids)
-    if user.role == RoleChoices.CLIENT and hasattr(user, "client_profile"):
-        return queryset.filter(client_id=user.client_profile.client_id)
+    if user.role == RoleChoices.CLIENT:
+        client = get_selected_client(user, client_id=client_id, require_selection=require_selection)
+        if client:
+            return queryset.filter(client_id=client.id)
+        return queryset.none()
     return queryset.none()
 
 
-def get_accessible_topics(user):
-    return Topic.objects.filter(device__in=get_accessible_devices(user)).select_related("device", "device__client")
+def get_accessible_topics(user, client_id=None, require_selection=False):
+    return Topic.objects.filter(device__in=get_accessible_devices(user, client_id, require_selection)).select_related(
+        "device",
+        "device__client",
+    )
 
 
-def get_accessible_topic_data(user):
-    return TopicData.objects.filter(topic__in=get_accessible_topics(user)).select_related("topic", "topic__device")
+def get_accessible_topic_data(user, client_id=None, require_selection=False):
+    return TopicData.objects.filter(topic__in=get_accessible_topics(user, client_id, require_selection)).select_related(
+        "topic",
+        "topic__device",
+    )
 
 class DeviceViewSet(viewsets.ModelViewSet):
     queryset = Device.objects.all()
@@ -38,7 +48,11 @@ class DeviceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = get_accessible_devices(self.request.user)
+        queryset = get_accessible_devices(
+            self.request.user,
+            client_id=self.request.query_params.get("client_id"),
+            require_selection=self.request.user.role == RoleChoices.CLIENT,
+        )
         client_id = self.request.query_params.get("client_id")
         device_type = self.request.query_params.get("device_type")
         if client_id:
@@ -91,7 +105,11 @@ class TopicViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = get_accessible_topics(self.request.user).filter(is_active=True)
+        queryset = get_accessible_topics(
+            self.request.user,
+            client_id=self.request.query_params.get("client_id"),
+            require_selection=self.request.user.role == RoleChoices.CLIENT,
+        ).filter(is_active=True)
         device_id = self.request.query_params.get("device_id")
         client_id = self.request.query_params.get("client_id")
         if device_id:
@@ -160,7 +178,11 @@ class TopicDataViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixin
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = get_accessible_topic_data(self.request.user)
+        queryset = get_accessible_topic_data(
+            self.request.user,
+            client_id=self.request.query_params.get("client_id"),
+            require_selection=self.request.user.role == RoleChoices.CLIENT,
+        )
         topic_id = self.request.query_params.get("topic_id")
         topic_code = self.request.query_params.get("topic_code")
         device_id = self.request.query_params.get("device_id")

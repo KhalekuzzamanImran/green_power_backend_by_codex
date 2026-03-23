@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.accounts.models import RoleChoices
+from apps.access_control.selectors import get_selected_client
 from apps.dashboards.models import ClientType, Dashboard, DashboardScope
 from apps.dashboards.serializers import ClientTypeSerializer, DashboardScopeSerializer, DashboardSerializer
 
@@ -29,12 +30,12 @@ class DashboardViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewset
         if user.role == RoleChoices.OM:
             return self.apply_filters(queryset)
         if user.role == RoleChoices.CLIENT:
-            profile = getattr(user, "client_profile", None)
-            if not profile:
+            client = get_selected_client(user, self.request.query_params.get("client_id"), require_selection=False)
+            if not client:
                 return queryset.none()
             queryset = queryset.filter(
-                client_type=profile.client.client_type,
-                scope=profile.client.dashboard_scope,
+                client_type=client.client_type,
+                scope=client.dashboard_scope,
             ).distinct()
             return self.apply_filters(queryset)
         return queryset.none()

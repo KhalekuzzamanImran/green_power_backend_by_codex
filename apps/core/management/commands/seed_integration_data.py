@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from apps.access_control.models import ClientProfile, OMClientAccess, UserPermissionOverride
+from apps.access_control.models import OMClientAccess, UserClientAccess, UserPermissionOverride
 from apps.accounts.models import RoleChoices, User
 from apps.clients.models import Client
 from apps.dashboards.models import ClientType, DashboardScope
@@ -100,11 +100,11 @@ class Command(BaseCommand):
             },
         )
 
-        ClientProfile.objects.update_or_create(
+        UserClientAccess.objects.update_or_create(
             user=client_management_user,
             defaults={"client": grid_client},
         )
-        ClientProfile.objects.update_or_create(
+        UserClientAccess.objects.update_or_create(
             user=client_board_user,
             defaults={"client": industry_client},
         )

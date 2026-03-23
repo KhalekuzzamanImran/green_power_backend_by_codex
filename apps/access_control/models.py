@@ -4,13 +4,15 @@ from django.db import models
 from apps.core.models import BaseModel
 
 
-class ClientProfile(BaseModel):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="client_profile")
+class UserClientAccess(BaseModel):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="client_accesses")
     client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="client_users")
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["user"], name="unique_client_profile_user"),
+            models.UniqueConstraint(fields=["user", "client"], name="unique_user_client_access"),
         ]
 
     def __str__(self):

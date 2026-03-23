@@ -254,151 +254,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
-  /api/v1/client-profiles/:
-    get:
-      operationId: client_profiles_list
-      tags:
-      - client-profiles
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ClientProfile'
-          description: ''
-    post:
-      operationId: client_profiles_create
-      tags:
-      - client-profiles
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClientProfile'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ClientProfile'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ClientProfile'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientProfile'
-          description: ''
-  /api/v1/client-profiles/{id}/:
-    get:
-      operationId: client_profiles_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this client profile.
-        required: true
-      tags:
-      - client-profiles
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientProfile'
-          description: ''
-    put:
-      operationId: client_profiles_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this client profile.
-        required: true
-      tags:
-      - client-profiles
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClientProfile'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ClientProfile'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ClientProfile'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientProfile'
-          description: ''
-    patch:
-      operationId: client_profiles_partial_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this client profile.
-        required: true
-      tags:
-      - client-profiles
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedClientProfile'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedClientProfile'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedClientProfile'
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientProfile'
-          description: ''
-    delete:
-      operationId: client_profiles_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this client profile.
-        required: true
-      tags:
-      - client-profiles
-      security:
-      - jwtAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/v1/client-types/:
     get:
       operationId: client_types_list
@@ -585,6 +440,20 @@ paths:
   /api/v1/clients/my/:
     get:
       operationId: clients_my_retrieve
+      tags:
+      - clients
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+  /api/v1/clients/my-clients/:
+    get:
+      operationId: clients_my_clients_retrieve
       tags:
       - clients
       security:
@@ -1395,6 +1264,151 @@ paths:
               schema:
                 $ref: '#/components/schemas/Topic'
           description: ''
+  /api/v1/user-client-accesses/:
+    get:
+      operationId: user_client_accesses_list
+      tags:
+      - user-client-accesses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserClientAccess'
+          description: ''
+    post:
+      operationId: user_client_accesses_create
+      tags:
+      - user-client-accesses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserClientAccess'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserClientAccess'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserClientAccess'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserClientAccess'
+          description: ''
+  /api/v1/user-client-accesses/{id}/:
+    get:
+      operationId: user_client_accesses_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user client access.
+        required: true
+      tags:
+      - user-client-accesses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserClientAccess'
+          description: ''
+    put:
+      operationId: user_client_accesses_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user client access.
+        required: true
+      tags:
+      - user-client-accesses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserClientAccess'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserClientAccess'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserClientAccess'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserClientAccess'
+          description: ''
+    patch:
+      operationId: user_client_accesses_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user client access.
+        required: true
+      tags:
+      - user-client-accesses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserClientAccess'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserClientAccess'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserClientAccess'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserClientAccess'
+          description: ''
+    delete:
+      operationId: user_client_accesses_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user client access.
+        required: true
+      tags:
+      - user-client-accesses
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/users/:
     get:
       operationId: users_list
@@ -1672,33 +1686,6 @@ components:
       - id
       - name
       - updated_at
-    ClientProfile:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        user:
-          type: string
-          format: uuid
-        client:
-          type: string
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - client
-      - created_at
-      - id
-      - updated_at
-      - user
     ClientType:
       type: object
       properties:
@@ -1948,6 +1935,14 @@ components:
           type: string
           nullable: true
           readOnly: true
+        accessible_clients:
+          type: array
+          items:
+            type: object
+          readOnly: true
+        requires_client_selection:
+          type: boolean
+          readOnly: true
         permissions:
           type: object
           readOnly: true
@@ -1957,6 +1952,7 @@ components:
             type: string
           readOnly: true
       required:
+      - accessible_clients
       - allowed_dashboards
       - client_id
       - client_type
@@ -1964,6 +1960,7 @@ components:
       - email
       - id
       - permissions
+      - requires_client_selection
       - role
       - username
     OMClientAccess:
@@ -2038,27 +2035,6 @@ components:
           type: string
         is_active:
           type: boolean
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-    PatchedClientProfile:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        user:
-          type: string
-          format: uuid
-        client:
-          type: string
-          format: uuid
         created_at:
           type: string
           format: date-time
@@ -2231,6 +2207,31 @@ components:
           type: boolean
           title: Staff status
           description: Designates whether the user can log into this admin site.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedUserClientAccess:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          type: string
+          format: uuid
+        client:
+          type: string
+          format: uuid
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -2439,6 +2440,37 @@ components:
       - role
       - updated_at
       - username
+    UserClientAccess:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          type: string
+          format: uuid
+        client:
+          type: string
+          format: uuid
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client
+      - created_at
+      - id
+      - updated_at
+      - user
     UserCreate:
       type: object
       properties:

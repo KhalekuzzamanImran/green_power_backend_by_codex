@@ -5,7 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import RoleChoices, User
 from apps.clients.models import Client
-from apps.access_control.models import ClientProfile
+from apps.access_control.models import UserClientAccess
 from apps.dashboards.models import ClientType, Dashboard, DashboardScope
 
 
@@ -28,7 +28,7 @@ class MeEndpointTests(APITestCase):
             client_type=self.client_type,
             dashboard_scope=self.scope,
         )
-        ClientProfile.objects.create(user=self.client_user, client=self.client_obj)
+        UserClientAccess.objects.create(user=self.client_user, client=self.client_obj)
         self.dashboard = Dashboard.objects.create(
             name="Grid Management",
             code="GRID_TIED_MANAGEMENT",
@@ -46,6 +46,8 @@ class MeEndpointTests(APITestCase):
         self.assertEqual(response.data["client_id"], str(self.client_obj.id))
         self.assertEqual(response.data["client_type"], "GRID_TIED")
         self.assertEqual(response.data["dashboard_scope"], "MANAGEMENT")
+        self.assertEqual(response.data["requires_client_selection"], False)
+        self.assertEqual(len(response.data["accessible_clients"]), 1)
         self.assertEqual(response.data["allowed_dashboards"], ["GRID_TIED_MANAGEMENT"])
 
 

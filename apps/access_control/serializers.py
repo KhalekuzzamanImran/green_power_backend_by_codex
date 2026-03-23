@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.access_control.models import ClientProfile, OMClientAccess, UserPermissionOverride
+from apps.access_control.models import OMClientAccess, UserClientAccess, UserPermissionOverride
 from apps.accounts.models import RoleChoices, User
 
 
@@ -16,13 +16,24 @@ class RoleBoundUserValidatorMixin:
         return attrs
 
 
-class ClientProfileSerializer(RoleBoundUserValidatorMixin, serializers.ModelSerializer):
+class UserClientAccessSerializer(RoleBoundUserValidatorMixin, serializers.ModelSerializer):
     role_required = RoleChoices.CLIENT
 
     class Meta:
-        model = ClientProfile
-        fields = ("id", "user", "client", "created_at", "updated_at")
+        model = UserClientAccess
+        fields = ("id", "user", "client", "is_default", "is_active", "created_at", "updated_at")
         read_only_fields = ("id", "created_at", "updated_at")
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        client = attrs.get("client")
+        instance = getattr(self, "instance", None)
+        existing_access = UserClientAccess.objects.filter(client=client)
+        if instance:
+            existing_access = existing_access.exclude(pk=instance.pk)
+        if client and existing_access.exists():
+            raise serializers.ValidationError({"client": "This client is already linked to another user."})
+        return attrs
 
 
 class OMClientAccessSerializer(RoleBoundUserValidatorMixin, serializers.ModelSerializer):

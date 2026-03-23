@@ -1,6 +1,7 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.access_control.selectors import get_accessible_clients_for_client_user, get_selected_client
 from apps.accounts.models import User
 from apps.dashboards.models import Dashboard
 
@@ -56,6 +57,8 @@ class MeSerializer(serializers.ModelSerializer):
     client_id = serializers.SerializerMethodField()
     client_type = serializers.SerializerMethodField()
     dashboard_scope = serializers.SerializerMethodField()
+    accessible_clients = serializers.SerializerMethodField()
+    requires_client_selection = serializers.SerializerMethodField()
     allowed_dashboards = serializers.SerializerMethodField()
 
     class Meta:
@@ -70,9 +73,20 @@ class MeSerializer(serializers.ModelSerializer):
             "client_id",
             "client_type",
             "dashboard_scope",
+            "accessible_clients",
+            "requires_client_selection",
             "permissions",
             "allowed_dashboards",
         )
+
+    def _get_selected_client(self, obj):
+        request = self.context.get("request")
+        client_id = None
+        if request:
+            client_id = request.query_params.get("client_id")
+        if obj.role != "CLIENT":
+            return None
+        return get_selected_client(obj, client_id=client_id, require_selection=False)
 
     @extend_schema_field({"type": "object"})
     def get_permissions(self, obj):
@@ -90,18 +104,39 @@ class MeSerializer(serializers.ModelSerializer):
 
     @extend_schema_field({"type": "string", "nullable": True})
     def get_client_id(self, obj):
-        profile = getattr(obj, "client_profile", None)
-        return str(profile.client_id) if profile else None
+        client = self._get_selected_client(obj)
+        return str(client.id) if client else None
 
     @extend_schema_field({"type": "string", "nullable": True})
     def get_client_type(self, obj):
-        profile = getattr(obj, "client_profile", None)
-        return profile.client.client_type.code if profile else None
+        client = self._get_selected_client(obj)
+        return client.client_type.code if client else None
 
     @extend_schema_field({"type": "string", "nullable": True})
     def get_dashboard_scope(self, obj):
-        profile = getattr(obj, "client_profile", None)
-        return profile.client.dashboard_scope.code if profile else None
+        client = self._get_selected_client(obj)
+        return client.dashboard_scope.code if client else None
+
+    @extend_schema_field({"type": "array", "items": {"type": "object"}})
+    def get_accessible_clients(self, obj):
+        if obj.role != "CLIENT":
+            return []
+        return [
+            {
+                "id": str(client.id),
+                "name": client.name,
+                "code": client.code,
+                "client_type": client.client_type.code,
+                "dashboard_scope": client.dashboard_scope.code,
+            }
+            for client in get_accessible_clients_for_client_user(obj)
+        ]
+
+    @extend_schema_field({"type": "boolean"})
+    def get_requires_client_selection(self, obj):
+        if obj.role != "CLIENT":
+            return False
+        return get_accessible_clients_for_client_user(obj).count() > 1
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_allowed_dashboards(self, obj):
@@ -109,13 +144,13 @@ class MeSerializer(serializers.ModelSerializer):
             return list(Dashboard.objects.filter(is_active=True).values_list("code", flat=True))
         if obj.role == "OM":
             return list(Dashboard.objects.filter(is_active=True).values_list("code", flat=True))
-        profile = getattr(obj, "client_profile", None)
-        if not profile:
+        client = self._get_selected_client(obj)
+        if not client:
             return []
         return list(
             Dashboard.objects.filter(
                 is_active=True,
-                client_type=profile.client.client_type,
-                scope=profile.client.dashboard_scope,
+                client_type=client.client_type,
+                scope=client.dashboard_scope,
             ).values_list("code", flat=True)
         )

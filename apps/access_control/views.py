@@ -1,9 +1,9 @@
 from rest_framework import viewsets
 
-from apps.access_control.models import ClientProfile, OMClientAccess, UserPermissionOverride
+from apps.access_control.models import OMClientAccess, UserClientAccess, UserPermissionOverride
 from apps.access_control.serializers import (
-    ClientProfileSerializer,
     OMClientAccessSerializer,
+    UserClientAccessSerializer,
     UserPermissionOverrideSerializer,
 )
 from apps.audit_logs.models import AuditAction, AuditLog
@@ -35,11 +35,11 @@ class AuditMixin:
         instance.delete()
 
 
-class ClientProfileViewSet(AuditMixin, viewsets.ModelViewSet):
-    queryset = ClientProfile.objects.select_related("user", "client").all()
-    serializer_class = ClientProfileSerializer
+class UserClientAccessViewSet(AuditMixin, viewsets.ModelViewSet):
+    queryset = UserClientAccess.objects.select_related("user", "client").all()
+    serializer_class = UserClientAccessSerializer
     permission_classes = [CanManageUsers]
-    audit_target_type = "ClientProfile"
+    audit_target_type = "UserClientAccess"
 
 
 class OMClientAccessViewSet(AuditMixin, viewsets.ModelViewSet):

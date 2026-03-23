@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.access_control.models import ClientProfile, OMClientAccess
+from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.accounts.models import RoleChoices, User
 from apps.clients.models import Client
 from apps.dashboards.models import ClientType, DashboardScope
@@ -47,7 +47,7 @@ class ThresholdPermissionTests(APITestCase):
             client_type=self.industry_type,
             dashboard_scope=self.scope,
         )
-        ClientProfile.objects.create(user=self.client_user, client=self.client_obj)
+        UserClientAccess.objects.create(user=self.client_user, client=self.client_obj)
         OMClientAccess.objects.create(om_user=self.om_user, client=self.client_obj)
         self.device = Device.objects.create(
             client=self.client_obj,
