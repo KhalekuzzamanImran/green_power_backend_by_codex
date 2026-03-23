@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.access_control.models import ClientProfile, OMClientAccess
 from apps.accounts.models import RoleChoices, User
 from apps.clients.models import Client
+from apps.dashboards.models import ClientType, DashboardScope
 from apps.devices.models import Device, DeviceType
 from apps.thresholds.models import DeviceThreshold
 
@@ -31,8 +32,21 @@ class ThresholdPermissionTests(APITestCase):
             email="threshold-other-om@example.com",
             role=RoleChoices.OM,
         )
-        self.client_obj = Client.objects.create(name="Threshold Client", code="THRESHOLD_CLIENT")
-        self.other_client_obj = Client.objects.create(name="Other Client", code="OTHER_CLIENT")
+        self.grid_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
+        self.industry_type, _ = ClientType.objects.get_or_create(code="INDUSTRY", defaults={"name": "Industry"})
+        self.scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
+        self.client_obj = Client.objects.create(
+            name="Threshold Client",
+            code="THRESHOLD_CLIENT",
+            client_type=self.grid_type,
+            dashboard_scope=self.scope,
+        )
+        self.other_client_obj = Client.objects.create(
+            name="Other Client",
+            code="OTHER_CLIENT",
+            client_type=self.industry_type,
+            dashboard_scope=self.scope,
+        )
         ClientProfile.objects.create(user=self.client_user, client=self.client_obj)
         OMClientAccess.objects.create(om_user=self.om_user, client=self.client_obj)
         self.device = Device.objects.create(

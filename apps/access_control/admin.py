@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.access_control.models import ClientDashboardAccess, ClientProfile, OMClientAccess, UserPermissionOverride
+from apps.access_control.models import ClientProfile, OMClientAccess, UserPermissionOverride
 
 
 @admin.register(ClientProfile)
@@ -13,13 +13,6 @@ class ClientProfileAdmin(admin.ModelAdmin):
 class OMClientAccessAdmin(admin.ModelAdmin):
     list_display = ("om_user", "client")
     search_fields = ("om_user__username", "client__name")
-
-
-@admin.register(ClientDashboardAccess)
-class ClientDashboardAccessAdmin(admin.ModelAdmin):
-    list_display = ("client_user", "dashboard")
-    search_fields = ("client_user__username", "dashboard__name")
-
 
 @admin.register(UserPermissionOverride)
 class UserPermissionOverrideAdmin(admin.ModelAdmin):

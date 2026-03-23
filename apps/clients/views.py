@@ -1,4 +1,6 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from apps.access_control.models import OMClientAccess
 from apps.accounts.models import RoleChoices
@@ -56,3 +58,10 @@ class ClientViewSet(viewsets.ModelViewSet):
             description=f"Deleted client {instance.name}",
         )
         instance.delete()
+
+    @action(detail=False, methods=["get"], url_path="my")
+    def my_client(self, request):
+        if request.user.role != RoleChoices.CLIENT or not hasattr(request.user, "client_profile"):
+            return Response({"detail": "Client profile not available."}, status=404)
+        serializer = self.get_serializer(request.user.client_profile.client)
+        return Response(serializer.data)

@@ -31,19 +31,6 @@ class OMClientAccess(BaseModel):
         return f"{self.om_user.username} -> {self.client.name}"
 
 
-class ClientDashboardAccess(BaseModel):
-    client_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dashboard_accesses")
-    dashboard = models.ForeignKey("dashboards.Dashboard", on_delete=models.CASCADE, related_name="allowed_users")
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["client_user", "dashboard"], name="unique_client_dashboard_access"),
-        ]
-
-    def __str__(self):
-        return f"{self.client_user.username} -> {self.dashboard.code}"
-
-
 class UserPermissionOverride(BaseModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="permission_override")
     can_set_threshold = models.BooleanField(default=False)
@@ -51,5 +38,3 @@ class UserPermissionOverride(BaseModel):
 
     def __str__(self):
         return f"Overrides for {self.user.username}"
-
-# Create your models here.

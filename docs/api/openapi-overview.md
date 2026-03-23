@@ -16,13 +16,20 @@ Primary role model:
 Core endpoints:
 - `GET|POST|PATCH|DELETE /api/v1/users/`
 - `GET|POST|PATCH|DELETE /api/v1/clients/`
+- `GET /api/v1/clients/my/`
 - `GET|POST|PATCH|DELETE /api/v1/devices/`
-- `GET /api/v1/devices/{id}/data/`
-- `GET /api/v1/devices/{id}/data/latest/`
+- `GET /api/v1/devices/{id}/topics/`
+- `GET|POST|PATCH|DELETE /api/v1/topics/`
+- `GET /api/v1/topics/{id}/data/`
+- `GET /api/v1/topics/{id}/data/latest/`
+- `GET|POST /api/v1/topic-data/`
+  Supports filters: `?topic_code=mqtt_rt_data`, `?topic_id=...`, `?device_id=...`
+- `GET /api/v1/client-types/`
+- `GET /api/v1/dashboard-scopes/`
 - `GET /api/v1/dashboards/`
+  Supports filters: `?client_type=GRID_TIED&scope=MANAGEMENT`
 - `GET /api/v1/dashboards/my/`
 - `GET|POST|PATCH|DELETE /api/v1/assignments/om-client/`
-- `GET|POST|PATCH|DELETE /api/v1/assignments/client-dashboard/`
 - `GET|POST|PATCH|DELETE /api/v1/client-profiles/`
 - `GET|POST|PATCH|DELETE /api/v1/permission-overrides/`
 - `GET|POST|PATCH|DELETE /api/v1/thresholds/`

@@ -7,8 +7,8 @@ from apps.access_control.models import OMClientAccess
 from apps.accounts.models import RoleChoices
 from apps.audit_logs.models import AuditAction, AuditLog
 from apps.core.permissions import IsAdminOrReadOnly
-from apps.devices.models import Device, DeviceData
-from apps.devices.serializers import DeviceDataSerializer, DeviceSerializer
+from apps.devices.models import Device, Topic, TopicData
+from apps.devices.serializers import DeviceSerializer, TopicDataSerializer, TopicSerializer
 
 
 def get_accessible_devices(user):
@@ -24,6 +24,13 @@ def get_accessible_devices(user):
         return queryset.filter(client_id=user.client_profile.client_id)
     return queryset.none()
 
+
+def get_accessible_topics(user):
+    return Topic.objects.filter(device__in=get_accessible_devices(user)).select_related("device", "device__client")
+
+
+def get_accessible_topic_data(user):
+    return TopicData.objects.filter(topic__in=get_accessible_topics(user)).select_related("topic", "topic__device")
 
 class DeviceViewSet(viewsets.ModelViewSet):
     queryset = Device.objects.all()
@@ -70,10 +77,63 @@ class DeviceViewSet(viewsets.ModelViewSet):
         )
         instance.delete()
 
+    @action(detail=True, methods=["get"], url_path="topics")
+    def topics(self, request, pk=None):
+        device = get_object_or_404(self.get_queryset(), pk=pk)
+        queryset = device.topics.filter(is_active=True).order_by("name")
+        serializer = TopicSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class TopicViewSet(viewsets.ModelViewSet):
+    queryset = Topic.objects.all()
+    serializer_class = TopicSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+    def get_queryset(self):
+        queryset = get_accessible_topics(self.request.user).filter(is_active=True)
+        device_id = self.request.query_params.get("device_id")
+        client_id = self.request.query_params.get("client_id")
+        if device_id:
+            queryset = queryset.filter(device_id=device_id)
+        if client_id:
+            queryset = queryset.filter(device__client_id=client_id)
+        return queryset.order_by("name")
+
+    def perform_create(self, serializer):
+        topic = serializer.save()
+        AuditLog.objects.create(
+            actor=self.request.user,
+            action=AuditAction.CREATE,
+            target_type="Topic",
+            target_id=str(topic.id),
+            description=f"Created topic {topic.code}",
+        )
+
+    def perform_update(self, serializer):
+        topic = serializer.save()
+        AuditLog.objects.create(
+            actor=self.request.user,
+            action=AuditAction.UPDATE,
+            target_type="Topic",
+            target_id=str(topic.id),
+            description=f"Updated topic {topic.code}",
+        )
+
+    def perform_destroy(self, instance):
+        AuditLog.objects.create(
+            actor=self.request.user,
+            action=AuditAction.DELETE,
+            target_type="Topic",
+            target_id=str(instance.id),
+            description=f"Deleted topic {instance.code}",
+        )
+        instance.delete()
+
     @action(detail=True, methods=["get"], url_path="data")
     def data(self, request, pk=None):
-        device = get_object_or_404(self.get_queryset(), pk=pk)
-        queryset = device.data_points.all()
+        topic = get_object_or_404(self.get_queryset(), pk=pk)
+        queryset = topic.data_points.all()
         recorded_from = request.query_params.get("from")
         recorded_to = request.query_params.get("to")
         limit = request.query_params.get("limit")
@@ -83,21 +143,31 @@ class DeviceViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(recorded_at__lte=recorded_to)
         if limit:
             queryset = queryset[: int(limit)]
-        serializer = DeviceDataSerializer(queryset, many=True)
+        serializer = TopicDataSerializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=["get"], url_path="data/latest")
     def latest_data(self, request, pk=None):
-        device = get_object_or_404(self.get_queryset(), pk=pk)
-        data = device.data_points.order_by("-recorded_at").first()
-        serializer = DeviceDataSerializer(data)
+        topic = get_object_or_404(self.get_queryset(), pk=pk)
+        data = topic.data_points.order_by("-recorded_at").first()
+        serializer = TopicDataSerializer(data)
         return Response(serializer.data if data else None)
 
 
-class DeviceDataViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    queryset = DeviceData.objects.all()
-    serializer_class = DeviceDataSerializer
+class TopicDataViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = TopicData.objects.all()
+    serializer_class = TopicDataSerializer
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
-        return DeviceData.objects.filter(device__in=get_accessible_devices(self.request.user)).select_related("device")
+        queryset = get_accessible_topic_data(self.request.user)
+        topic_id = self.request.query_params.get("topic_id")
+        topic_code = self.request.query_params.get("topic_code")
+        device_id = self.request.query_params.get("device_id")
+        if topic_id:
+            queryset = queryset.filter(topic_id=topic_id)
+        if topic_code:
+            queryset = queryset.filter(topic__code=topic_code)
+        if device_id:
+            queryset = queryset.filter(topic__device_id=device_id)
+        return queryset.order_by("-recorded_at")

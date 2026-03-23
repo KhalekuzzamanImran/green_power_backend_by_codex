@@ -5,11 +5,11 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from apps.access_control.models import ClientDashboardAccess, ClientProfile, OMClientAccess, UserPermissionOverride
+from apps.access_control.models import ClientProfile, OMClientAccess, UserPermissionOverride
 from apps.accounts.models import RoleChoices, User
 from apps.clients.models import Client
-from apps.dashboards.models import Dashboard
-from apps.devices.models import Device, DeviceData, DeviceType
+from apps.dashboards.models import ClientType, DashboardScope
+from apps.devices.models import Device, DeviceType, Topic, TopicData
 from apps.thresholds.models import DeviceThreshold
 
 
@@ -67,10 +67,18 @@ class Command(BaseCommand):
             phone="01700000004",
         )
 
+        grid_type = ClientType.objects.get(code="GRID_TIED")
+        industry_type = ClientType.objects.get(code="INDUSTRY")
+
+        management_scope = DashboardScope.objects.get(code="MANAGEMENT")
+        board_scope = DashboardScope.objects.get(code="BOARD")
+
         grid_client, _ = Client.objects.update_or_create(
             code="GRID_SITE_ALPHA",
             defaults={
                 "name": "Grid Site Alpha",
+                "client_type": grid_type,
+                "dashboard_scope": management_scope,
                 "contact_person": "Grid Manager",
                 "email": "alpha.client@greenpower.local",
                 "phone": "01800000001",
@@ -82,6 +90,8 @@ class Command(BaseCommand):
             code="INDUSTRY_SITE_BETA",
             defaults={
                 "name": "Industry Site Beta",
+                "client_type": industry_type,
+                "dashboard_scope": board_scope,
                 "contact_person": "Board Office",
                 "email": "beta.client@greenpower.local",
                 "phone": "01800000002",
@@ -110,17 +120,6 @@ class Command(BaseCommand):
             },
         )
 
-        management_dashboard = Dashboard.objects.get(code="GRID_TIED_MANAGEMENT")
-        board_dashboard = Dashboard.objects.get(code="INDUSTRY_BOARD")
-        ClientDashboardAccess.objects.update_or_create(
-            client_user=client_management_user,
-            dashboard=management_dashboard,
-        )
-        ClientDashboardAccess.objects.update_or_create(
-            client_user=client_board_user,
-            dashboard=board_dashboard,
-        )
-
         grid_device = self._upsert_device(
             client=grid_client,
             name="Grid Alpha Inverter",
@@ -140,25 +139,99 @@ class Command(BaseCommand):
             device_type=DeviceType.GRID,
         )
 
+        grid_inverter_status_topic = self._upsert_topic(
+            grid_device,
+            name="Inverter Status",
+            code="grid.alpha.inverter.status",
+            description="Operational status topic for the grid inverter.",
+        )
+        mqtt_rt_topic = self._upsert_topic(
+            grid_device,
+            name="MQTT RT Data",
+            code="mqtt_rt_data",
+            description="Real-time MQTT topic for the grid-tied main dashboard.",
+        )
+        mqtt_eny_topic = self._upsert_topic(
+            grid_device,
+            name="MQTT Energy Now",
+            code="mqtt_eny_now",
+            description="Current energy MQTT topic for the grid-tied main dashboard.",
+        )
+        mqtt_day_topic = self._upsert_topic(
+            grid_device,
+            name="MQTT Day Data",
+            code="mqtt_day_data",
+            description="Daily MQTT topic for the grid-tied main dashboard.",
+        )
+        mqtt_frz_topic = self._upsert_topic(
+            grid_device,
+            name="MQTT FRZ Data",
+            code="mqtt_frz_data",
+            description="Frozen MQTT topic for the grid-tied main dashboard.",
+        )
+        grid_inverter_alarm_topic = self._upsert_topic(
+            grid_device,
+            name="Inverter Alarm",
+            code="grid.alpha.inverter.alarm",
+            description="Alarm topic for the grid inverter.",
+        )
+        bess_soc_topic = self._upsert_topic(
+            bess_device,
+            name="BESS State Of Charge",
+            code="grid.alpha.bess.soc",
+            description="State of charge topic for the BESS.",
+        )
+        industry_frequency_topic = self._upsert_topic(
+            industry_device,
+            name="Meter Frequency",
+            code="industry.beta.meter.frequency",
+            description="Frequency topic for the industry meter.",
+        )
+
         self._upsert_threshold(grid_device, "voltage_max", Decimal("230.50"), "V", om_user)
         self._upsert_threshold(bess_device, "temperature_max", Decimal("38.00"), "C", om_user)
         self._upsert_threshold(industry_device, "current_max", Decimal("125.00"), "A", om_user)
 
         now = timezone.now()
-        self._upsert_data_point(
-            grid_device,
-            recorded_at=now - timedelta(minutes=15),
-            payload={"power_kw": 52.3, "voltage": 225.4, "status": "healthy"},
+        self._upsert_topic_data(
+            mqtt_rt_topic,
+            recorded_at=now - timedelta(minutes=4),
+            payload={"value": 52.3, "unit": "kW"},
         )
-        self._upsert_data_point(
-            bess_device,
-            recorded_at=now - timedelta(minutes=10),
-            payload={"soc": 81.2, "temperature": 32.4, "status": "charging"},
+        self._upsert_topic_data(
+            mqtt_eny_topic,
+            recorded_at=now - timedelta(minutes=4),
+            payload={"value": 1245.7, "unit": "kWh"},
         )
-        self._upsert_data_point(
-            industry_device,
-            recorded_at=now - timedelta(minutes=5),
-            payload={"current": 97.5, "frequency": 49.9, "status": "stable"},
+        self._upsert_topic_data(
+            mqtt_day_topic,
+            recorded_at=now - timedelta(minutes=4),
+            payload={"value": 186.2, "unit": "kWh"},
+        )
+        self._upsert_topic_data(
+            mqtt_frz_topic,
+            recorded_at=now - timedelta(minutes=4),
+            payload={"value": 180.9, "unit": "kWh"},
+        )
+        self._upsert_topic_data(
+            grid_inverter_status_topic,
+            recorded_at=now - timedelta(minutes=3),
+            payload={"value": "healthy"},
+        )
+        self._upsert_topic_data(
+            grid_inverter_alarm_topic,
+            recorded_at=now - timedelta(minutes=3),
+            payload={"value": "none"},
+        )
+        self._upsert_topic_data(
+            bess_soc_topic,
+            recorded_at=now - timedelta(minutes=2),
+            payload={"value": 81.2, "unit": "%"},
+        )
+        self._upsert_topic_data(
+            industry_frequency_topic,
+            recorded_at=now - timedelta(minutes=1),
+            payload={"value": 49.9, "unit": "Hz"},
         )
 
         self.stdout.write(self.style.SUCCESS("Integration seed complete."))
@@ -209,9 +282,21 @@ class Command(BaseCommand):
             },
         )
 
-    def _upsert_data_point(self, device, recorded_at, payload):
-        DeviceData.objects.update_or_create(
-            device=device,
+    def _upsert_topic(self, device, name, code, description):
+        topic, _ = Topic.objects.update_or_create(
+            code=code,
+            defaults={
+                "device": device,
+                "name": name,
+                "description": description,
+                "is_active": True,
+            },
+        )
+        return topic
+
+    def _upsert_topic_data(self, topic, recorded_at, payload):
+        TopicData.objects.update_or_create(
+            topic=topic,
             recorded_at=recorded_at,
             defaults={"payload": payload},
         )

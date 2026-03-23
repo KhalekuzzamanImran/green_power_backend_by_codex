@@ -25,8 +25,22 @@ class Device(BaseModel):
         return f"{self.name} ({self.serial_number})"
 
 
-class DeviceData(BaseModel):
-    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="data_points")
+class Topic(BaseModel):
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="topics")
+    name = models.CharField(max_length=255)
+    code = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.device.serial_number} -> {self.code}"
+
+
+class TopicData(BaseModel):
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="data_points")
     payload = models.JSONField()
     recorded_at = models.DateTimeField(db_index=True)
 
@@ -34,6 +48,4 @@ class DeviceData(BaseModel):
         ordering = ["-recorded_at"]
 
     def __str__(self):
-        return f"{self.device.serial_number} @ {self.recorded_at.isoformat()}"
-
-# Create your models here.
+        return f"{self.topic.code} @ {self.recorded_at.isoformat()}"

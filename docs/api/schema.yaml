@@ -4,151 +4,6 @@ info:
   version: 1.0.0
   description: Role-based backend API for Admin, O&M, and Client dashboards.
 paths:
-  /api/v1/assignments/client-dashboard/:
-    get:
-      operationId: assignments_client_dashboard_list
-      tags:
-      - assignments
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ClientDashboardAccess'
-          description: ''
-    post:
-      operationId: assignments_client_dashboard_create
-      tags:
-      - assignments
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClientDashboardAccess'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ClientDashboardAccess'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ClientDashboardAccess'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientDashboardAccess'
-          description: ''
-  /api/v1/assignments/client-dashboard/{id}/:
-    get:
-      operationId: assignments_client_dashboard_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this client dashboard access.
-        required: true
-      tags:
-      - assignments
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientDashboardAccess'
-          description: ''
-    put:
-      operationId: assignments_client_dashboard_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this client dashboard access.
-        required: true
-      tags:
-      - assignments
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClientDashboardAccess'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ClientDashboardAccess'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ClientDashboardAccess'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientDashboardAccess'
-          description: ''
-    patch:
-      operationId: assignments_client_dashboard_partial_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this client dashboard access.
-        required: true
-      tags:
-      - assignments
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedClientDashboardAccess'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedClientDashboardAccess'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedClientDashboardAccess'
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientDashboardAccess'
-          description: ''
-    delete:
-      operationId: assignments_client_dashboard_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this client dashboard access.
-        required: true
-      tags:
-      - assignments
-      security:
-      - jwtAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/v1/assignments/om-client/:
     get:
       operationId: assignments_om_client_list
@@ -544,6 +399,44 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/client-types/:
+    get:
+      operationId: client_types_list
+      tags:
+      - client-types
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientType'
+          description: ''
+  /api/v1/client-types/{id}/:
+    get:
+      operationId: client_types_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this client type.
+        required: true
+      tags:
+      - client-types
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientType'
+          description: ''
   /api/v1/clients/:
     get:
       operationId: clients_list
@@ -689,6 +582,58 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/clients/my/:
+    get:
+      operationId: clients_my_retrieve
+      tags:
+      - clients
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: ''
+  /api/v1/dashboard-scopes/:
+    get:
+      operationId: dashboard_scopes_list
+      tags:
+      - dashboard-scopes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DashboardScope'
+          description: ''
+  /api/v1/dashboard-scopes/{id}/:
+    get:
+      operationId: dashboard_scopes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this dashboard scope.
+        required: true
+      tags:
+      - dashboard-scopes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardScope'
+          description: ''
   /api/v1/dashboards/:
     get:
       operationId: dashboards_list
@@ -740,69 +685,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Dashboard'
-          description: ''
-  /api/v1/device-data/:
-    get:
-      operationId: device_data_list
-      tags:
-      - device-data
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DeviceData'
-          description: ''
-    post:
-      operationId: device_data_create
-      tags:
-      - device-data
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeviceData'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/DeviceData'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/DeviceData'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceData'
-          description: ''
-  /api/v1/device-data/{id}/:
-    get:
-      operationId: device_data_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this device data.
-        required: true
-      tags:
-      - device-data
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceData'
           description: ''
   /api/v1/devices/:
     get:
@@ -949,31 +831,9 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/v1/devices/{id}/data/:
+  /api/v1/devices/{id}/topics/:
     get:
-      operationId: devices_data_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this device.
-        required: true
-      tags:
-      - devices
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Device'
-          description: ''
-  /api/v1/devices/{id}/data/latest/:
-    get:
-      operationId: devices_data_latest_retrieve
+      operationId: devices_topics_retrieve
       parameters:
       - in: path
         name: id
@@ -1283,6 +1143,258 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/topic-data/:
+    get:
+      operationId: topic_data_list
+      tags:
+      - topic-data
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopicData'
+          description: ''
+    post:
+      operationId: topic_data_create
+      tags:
+      - topic-data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicData'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TopicData'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TopicData'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicData'
+          description: ''
+  /api/v1/topic-data/{id}/:
+    get:
+      operationId: topic_data_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this topic data.
+        required: true
+      tags:
+      - topic-data
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicData'
+          description: ''
+  /api/v1/topics/:
+    get:
+      operationId: topics_list
+      tags:
+      - topics
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Topic'
+          description: ''
+    post:
+      operationId: topics_create
+      tags:
+      - topics
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Topic'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Topic'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Topic'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+          description: ''
+  /api/v1/topics/{id}/:
+    get:
+      operationId: topics_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this topic.
+        required: true
+      tags:
+      - topics
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+          description: ''
+    put:
+      operationId: topics_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this topic.
+        required: true
+      tags:
+      - topics
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Topic'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Topic'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Topic'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+          description: ''
+    patch:
+      operationId: topics_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this topic.
+        required: true
+      tags:
+      - topics
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTopic'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTopic'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTopic'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+          description: ''
+    delete:
+      operationId: topics_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this topic.
+        required: true
+      tags:
+      - topics
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/topics/{id}/data/:
+    get:
+      operationId: topics_data_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this topic.
+        required: true
+      tags:
+      - topics
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+          description: ''
+  /api/v1/topics/{id}/data/latest/:
+    get:
+      operationId: topics_data_latest_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this topic.
+        required: true
+      tags:
+      - topics
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+          description: ''
   /api/v1/users/:
     get:
       operationId: users_list
@@ -1508,6 +1620,24 @@ components:
         code:
           type: string
           maxLength: 100
+        client_type:
+          type: string
+          format: uuid
+        client_type_code:
+          type: string
+          readOnly: true
+        client_type_name:
+          type: string
+          readOnly: true
+        dashboard_scope:
+          type: string
+          format: uuid
+        dashboard_scope_code:
+          type: string
+          readOnly: true
+        dashboard_scope_name:
+          type: string
+          readOnly: true
         contact_person:
           type: string
           maxLength: 255
@@ -1531,37 +1661,16 @@ components:
           format: date-time
           readOnly: true
       required:
+      - client_type
+      - client_type_code
+      - client_type_name
       - code
       - created_at
+      - dashboard_scope
+      - dashboard_scope_code
+      - dashboard_scope_name
       - id
       - name
-      - updated_at
-    ClientDashboardAccess:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        client_user:
-          type: string
-          format: uuid
-        dashboard:
-          type: string
-          format: uuid
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - client_user
-      - created_at
-      - dashboard
-      - id
       - updated_at
     ClientProfile:
       type: object
@@ -1590,6 +1699,37 @@ components:
       - id
       - updated_at
       - user
+    ClientType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - code
+      - created_at
+      - id
+      - is_active
+      - name
+      - updated_at
     Dashboard:
       type: object
       properties:
@@ -1603,8 +1743,24 @@ components:
         code:
           type: string
           maxLength: 100
-        dashboard_type:
-          $ref: '#/components/schemas/DashboardTypeEnum'
+        client_type:
+          type: string
+          format: uuid
+        client_type_code:
+          type: string
+          readOnly: true
+        client_type_name:
+          type: string
+          readOnly: true
+        scope:
+          type: string
+          format: uuid
+        scope_code:
+          type: string
+          readOnly: true
+        scope_name:
+          type: string
+          readOnly: true
         is_active:
           type: boolean
         created_at:
@@ -1616,34 +1772,48 @@ components:
           format: date-time
           readOnly: true
       required:
+      - client_type
+      - client_type_code
+      - client_type_name
       - code
       - created_at
-      - dashboard_type
       - id
       - name
+      - scope
+      - scope_code
+      - scope_name
       - updated_at
-    DashboardTypeEnum:
-      enum:
-      - GRID_TIED_MAIN
-      - GRID_TIED_MANAGEMENT
-      - APARTMENT_MAIN
-      - APARTMENT_FLOOR_WISE
-      - INDUSTRY_MAIN
-      - INDUSTRY_ZONING
-      - INDUSTRY_BOARD
-      - INDUSTRY_MD_CEO
-      - INDUSTRY_OWNER
-      type: string
-      description: |-
-        * `GRID_TIED_MAIN` - Grid-Tied Main
-        * `GRID_TIED_MANAGEMENT` - Grid-Tied Management
-        * `APARTMENT_MAIN` - Apartment Main
-        * `APARTMENT_FLOOR_WISE` - Apartment Floor Wise
-        * `INDUSTRY_MAIN` - Industry Main
-        * `INDUSTRY_ZONING` - Industry Zoning
-        * `INDUSTRY_BOARD` - Industry Board
-        * `INDUSTRY_MD_CEO` - Industry MD/CEO
-        * `INDUSTRY_OWNER` - Industry Owner
+    DashboardScope:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - code
+      - created_at
+      - id
+      - is_active
+      - name
+      - updated_at
     Device:
       type: object
       properties:
@@ -1687,35 +1857,6 @@ components:
       - id
       - name
       - serial_number
-      - updated_at
-    DeviceData:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        device:
-          type: string
-          format: uuid
-        payload: {}
-        recorded_at:
-          type: string
-          format: date-time
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - created_at
-      - device
-      - id
-      - payload
-      - recorded_at
       - updated_at
     DeviceThreshold:
       type: object
@@ -1799,6 +1940,14 @@ components:
           type: string
           nullable: true
           readOnly: true
+        client_type:
+          type: string
+          nullable: true
+          readOnly: true
+        dashboard_scope:
+          type: string
+          nullable: true
+          readOnly: true
         permissions:
           type: object
           readOnly: true
@@ -1810,6 +1959,8 @@ components:
       required:
       - allowed_dashboards
       - client_id
+      - client_type
+      - dashboard_scope
       - email
       - id
       - permissions
@@ -1855,6 +2006,24 @@ components:
         code:
           type: string
           maxLength: 100
+        client_type:
+          type: string
+          format: uuid
+        client_type_code:
+          type: string
+          readOnly: true
+        client_type_name:
+          type: string
+          readOnly: true
+        dashboard_scope:
+          type: string
+          format: uuid
+        dashboard_scope_code:
+          type: string
+          readOnly: true
+        dashboard_scope_name:
+          type: string
+          readOnly: true
         contact_person:
           type: string
           maxLength: 255
@@ -1869,27 +2038,6 @@ components:
           type: string
         is_active:
           type: boolean
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-    PatchedClientDashboardAccess:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-        client_user:
-          type: string
-          format: uuid
-        dashboard:
-          type: string
-          format: uuid
         created_at:
           type: string
           format: date-time
@@ -2008,6 +2156,44 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PatchedTopic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        device:
+          type: string
+          format: uuid
+        device_name:
+          type: string
+          readOnly: true
+        device_serial_number:
+          type: string
+          readOnly: true
+        client_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        code:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedUser:
       type: object
       properties:
@@ -2116,6 +2302,91 @@ components:
       required:
       - access
       - refresh
+    Topic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        device:
+          type: string
+          format: uuid
+        device_name:
+          type: string
+          readOnly: true
+        device_serial_number:
+          type: string
+          readOnly: true
+        client_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        code:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client_id
+      - code
+      - created_at
+      - device
+      - device_name
+      - device_serial_number
+      - id
+      - name
+      - updated_at
+    TopicData:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        topic:
+          type: string
+          format: uuid
+        topic_code:
+          type: string
+          readOnly: true
+        device_serial_number:
+          type: string
+          readOnly: true
+        payload: {}
+        recorded_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - device_serial_number
+      - id
+      - payload
+      - recorded_at
+      - topic
+      - topic_code
+      - updated_at
     User:
       type: object
       properties:

@@ -1,8 +1,7 @@
 from rest_framework import viewsets
 
-from apps.access_control.models import ClientDashboardAccess, ClientProfile, OMClientAccess, UserPermissionOverride
+from apps.access_control.models import ClientProfile, OMClientAccess, UserPermissionOverride
 from apps.access_control.serializers import (
-    ClientDashboardAccessSerializer,
     ClientProfileSerializer,
     OMClientAccessSerializer,
     UserPermissionOverrideSerializer,
@@ -48,14 +47,6 @@ class OMClientAccessViewSet(AuditMixin, viewsets.ModelViewSet):
     serializer_class = OMClientAccessSerializer
     permission_classes = [CanManageUsers]
     audit_target_type = "OMClientAccess"
-
-
-class ClientDashboardAccessViewSet(AuditMixin, viewsets.ModelViewSet):
-    queryset = ClientDashboardAccess.objects.select_related("client_user", "dashboard").all()
-    serializer_class = ClientDashboardAccessSerializer
-    permission_classes = [CanManageUsers]
-    audit_target_type = "ClientDashboardAccess"
-
 
 class UserPermissionOverrideViewSet(AuditMixin, viewsets.ModelViewSet):
     queryset = UserPermissionOverride.objects.select_related("user").all()

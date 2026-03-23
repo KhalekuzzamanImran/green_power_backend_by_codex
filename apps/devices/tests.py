@@ -5,7 +5,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.access_control.models import ClientProfile, OMClientAccess
 from apps.accounts.models import RoleChoices, User
 from apps.clients.models import Client
-from apps.devices.models import Device, DeviceType
+from apps.dashboards.models import ClientType, DashboardScope
+from apps.devices.models import Device, DeviceType, Topic, TopicData
 
 
 class DeviceVisibilityTests(APITestCase):
@@ -22,8 +23,21 @@ class DeviceVisibilityTests(APITestCase):
             email="clientscope@example.com",
             role=RoleChoices.CLIENT,
         )
-        self.client_allowed = Client.objects.create(name="Client Allowed", code="CLIENT_ALLOWED")
-        self.client_other = Client.objects.create(name="Client Other", code="CLIENT_OTHER")
+        self.grid_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
+        self.industry_type, _ = ClientType.objects.get_or_create(code="INDUSTRY", defaults={"name": "Industry"})
+        self.scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
+        self.client_allowed = Client.objects.create(
+            name="Client Allowed",
+            code="CLIENT_ALLOWED",
+            client_type=self.grid_type,
+            dashboard_scope=self.scope,
+        )
+        self.client_other = Client.objects.create(
+            name="Client Other",
+            code="CLIENT_OTHER",
+            client_type=self.industry_type,
+            dashboard_scope=self.scope,
+        )
         ClientProfile.objects.create(user=self.client_user, client=self.client_allowed)
         OMClientAccess.objects.create(om_user=self.om_user, client=self.client_allowed)
         self.device_allowed = Device.objects.create(
@@ -37,6 +51,26 @@ class DeviceVisibilityTests(APITestCase):
             name="Other Device",
             serial_number="SN-OTHER",
             device_type=DeviceType.GRID,
+        )
+        self.topic_allowed = Topic.objects.create(
+            device=self.device_allowed,
+            name="Allowed Topic",
+            code="allowed.topic",
+        )
+        self.topic_other = Topic.objects.create(
+            device=self.device_other,
+            name="Other Topic",
+            code="other.topic",
+        )
+        self.topic_allowed_data = TopicData.objects.create(
+            topic=self.topic_allowed,
+            payload={"value": 52.3, "unit": "kW"},
+            recorded_at="2026-03-23T10:00:00Z",
+        )
+        self.topic_other_data = TopicData.objects.create(
+            topic=self.topic_other,
+            payload={"value": 12.1, "unit": "kW"},
+            recorded_at="2026-03-23T10:05:00Z",
         )
 
     def test_om_only_sees_assigned_client_devices(self):
@@ -58,5 +92,55 @@ class DeviceVisibilityTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         serials = {row["serial_number"] for row in response.data}
         self.assertEqual(serials, {"SN-ALLOWED"})
+
+    def test_client_only_sees_topics_for_own_devices(self):
+        refresh = RefreshToken.for_user(self.client_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.get("/api/v1/topics/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        codes = {row["code"] for row in response.data}
+        self.assertEqual(codes, {"allowed.topic"})
+
+    def test_client_can_fetch_device_topics_for_owned_device(self):
+        refresh = RefreshToken.for_user(self.client_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.get(f"/api/v1/devices/{self.device_allowed.id}/topics/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        codes = {row["code"] for row in response.data}
+        self.assertEqual(codes, {"allowed.topic"})
+
+    def test_client_only_sees_topic_data_for_own_topics(self):
+        refresh = RefreshToken.for_user(self.client_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.get("/api/v1/topic-data/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        topic_codes = {row["topic_code"] for row in response.data}
+        self.assertEqual(topic_codes, {"allowed.topic"})
+
+    def test_client_can_fetch_topic_wise_data_for_owned_topic(self):
+        refresh = RefreshToken.for_user(self.client_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.get(f"/api/v1/topics/{self.topic_allowed.id}/data/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["topic_code"], "allowed.topic")
+
+    def test_topic_data_supports_topic_code_filter(self):
+        refresh = RefreshToken.for_user(self.client_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.get("/api/v1/topic-data/?topic_code=allowed.topic")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["topic_code"], "allowed.topic")
 
 # Create your tests here.
