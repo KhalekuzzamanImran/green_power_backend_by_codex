@@ -1,0 +1,669 @@
+{
+  "info": {
+    "_postman_id": "1f319963-5212-49c1-9f80-b593e117e04a",
+    "name": "Green Power Backend Codex",
+    "description": "Ready-to-import Postman collection for the Green Power backend. Update collection variables if needed, run Login first, then the client-aware requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "username",
+      "value": "client_grid_management"
+    },
+    {
+      "key": "password",
+      "value": "ReactDemo123!"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "selected_client_id",
+      "value": ""
+    },
+    {
+      "key": "selected_device_id",
+      "value": ""
+    },
+    {
+      "key": "selected_topic_id",
+      "value": ""
+    },
+    {
+      "key": "selected_topic_code",
+      "value": "mqtt_rt_data"
+    },
+    {
+      "key": "dashboard_client_type",
+      "value": "GRID_TIED"
+    },
+    {
+      "key": "dashboard_scope",
+      "value": "MANAGEMENT"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.access) pm.collectionVariables.set('access_token', data.access);",
+                  "if (data.refresh) pm.collectionVariables.set('refresh_token', data.refresh);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (!data.requires_client_selection && data.client_id) {",
+                  "  pm.collectionVariables.set('selected_client_id', data.client_id);",
+                  "}",
+                  "if (Array.isArray(data.accessible_clients) && data.accessible_clients.length === 1) {",
+                  "  pm.collectionVariables.set('selected_client_id', data.accessible_clients[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client Flow",
+      "item": [
+        {
+          "name": "My Clients",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (Array.isArray(data) && data.length > 0 && !pm.collectionVariables.get('selected_client_id')) {",
+                  "  pm.collectionVariables.set('selected_client_id', data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/my-clients/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients",
+                "my-clients",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "My Client",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/my/?client_id={{selected_client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients",
+                "my",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{selected_client_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dashboards My",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboards/my/?client_id={{selected_client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboards",
+                "my",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{selected_client_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dashboards Filtered",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboards/?client_type={{dashboard_client_type}}&scope={{dashboard_scope}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboards",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_type",
+                  "value": "{{dashboard_client_type}}"
+                },
+                {
+                  "key": "scope",
+                  "value": "{{dashboard_scope}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Devices And Topics",
+      "item": [
+        {
+          "name": "Devices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (Array.isArray(data) && data.length > 0) {",
+                  "  pm.collectionVariables.set('selected_device_id', data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/?client_id={{selected_client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{selected_client_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Device Topics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (Array.isArray(data) && data.length > 0) {",
+                  "  pm.collectionVariables.set('selected_topic_id', data[0].id);",
+                  "  pm.collectionVariables.set('selected_topic_code', data[0].code);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/{{selected_device_id}}/topics/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices",
+                "{{selected_device_id}}",
+                "topics",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Topics List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (Array.isArray(data) && data.length > 0) {",
+                  "  pm.collectionVariables.set('selected_topic_id', data[0].id);",
+                  "  pm.collectionVariables.set('selected_topic_code', data[0].code);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/topics/?client_id={{selected_client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "topics",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{selected_client_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Topic Data",
+      "item": [
+        {
+          "name": "Topic Data By Code",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/topic-data/?client_id={{selected_client_id}}&topic_code={{selected_topic_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "topic-data",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{selected_client_id}}"
+                },
+                {
+                  "key": "topic_code",
+                  "value": "{{selected_topic_code}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Topic Data By Topic ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/topic-data/?client_id={{selected_client_id}}&topic_id={{selected_topic_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "topic-data",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{selected_client_id}}"
+                },
+                {
+                  "key": "topic_id",
+                  "value": "{{selected_topic_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Topic Data Nested",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/topics/{{selected_topic_id}}/data/?client_id={{selected_client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "topics",
+                "{{selected_topic_id}}",
+                "data",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{selected_client_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Topic Data Latest",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/topics/{{selected_topic_id}}/data/latest/?client_id={{selected_client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "topics",
+                "{{selected_topic_id}}",
+                "data",
+                "latest",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "client_id",
+                  "value": "{{selected_client_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lookups",
+      "item": [
+        {
+          "name": "Client Types",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/client-types/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "client-types",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dashboard Scopes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard-scopes/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard-scopes",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin And Ops",
+      "item": [
+        {
+          "name": "Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "User Client Accesses",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-client-accesses/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user-client-accesses",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "OM Client Assignments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/assignments/om-client/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "assignments",
+                "om-client",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Thresholds",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/thresholds/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "thresholds",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/audit-logs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "audit-logs",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

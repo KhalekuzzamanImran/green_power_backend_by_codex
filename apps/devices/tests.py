@@ -183,5 +183,3 @@ class DeviceVisibilityTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         serials = {row["serial_number"] for row in response.data}
         self.assertEqual(serials, {second_device.serial_number})
-
-# Create your tests here.

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from apps.access_control.models import OMClientAccess, UserClientAccess, UserPermissionOverride
-from apps.accounts.models import RoleChoices, User
+from apps.access_control.models import OMClientAccess, UserClientAccess
+from apps.accounts.models import RoleChoices
 
 
 class RoleBoundUserValidatorMixin:
@@ -43,17 +43,4 @@ class OMClientAccessSerializer(RoleBoundUserValidatorMixin, serializers.ModelSer
     class Meta:
         model = OMClientAccess
         fields = ("id", "om_user", "client", "created_at", "updated_at")
-        read_only_fields = ("id", "created_at", "updated_at")
-
-class UserPermissionOverrideSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserPermissionOverride
-        fields = (
-            "id",
-            "user",
-            "can_set_threshold",
-            "can_view_all_clients",
-            "created_at",
-            "updated_at",
-        )
         read_only_fields = ("id", "created_at", "updated_at")

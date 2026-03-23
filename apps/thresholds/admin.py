@@ -7,5 +7,3 @@ from apps.thresholds.models import DeviceThreshold
 class DeviceThresholdAdmin(admin.ModelAdmin):
     list_display = ("device", "key", "value", "unit", "updated_by")
     search_fields = ("device__serial_number", "key")
-
-# Register your models here.

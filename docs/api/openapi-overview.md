@@ -31,7 +31,6 @@ Core endpoints:
 - `GET /api/v1/dashboards/my/`
 - `GET|POST|PATCH|DELETE /api/v1/assignments/om-client/`
 - `GET|POST|PATCH|DELETE /api/v1/user-client-accesses/`
-- `GET|POST|PATCH|DELETE /api/v1/permission-overrides/`
 - `GET|POST|PATCH|DELETE /api/v1/thresholds/`
 - `GET /api/v1/audit-logs/`
 

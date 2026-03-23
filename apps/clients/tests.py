@@ -119,5 +119,3 @@ class MultiClientSelectionTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["code"], "CLIENT_TWO")
-
-# Create your tests here.

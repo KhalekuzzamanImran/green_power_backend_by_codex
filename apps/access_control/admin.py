@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from apps.accounts.models import RoleChoices, User
-from apps.access_control.models import OMClientAccess, UserClientAccess, UserPermissionOverride
+from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.clients.models import Client
 
 
@@ -23,9 +23,3 @@ class UserClientAccessAdmin(admin.ModelAdmin):
 class OMClientAccessAdmin(admin.ModelAdmin):
     list_display = ("om_user", "client")
     search_fields = ("om_user__username", "client__name")
-
-@admin.register(UserPermissionOverride)
-class UserPermissionOverrideAdmin(admin.ModelAdmin):
-    list_display = ("user", "can_set_threshold", "can_view_all_clients")
-
-# Register your models here.

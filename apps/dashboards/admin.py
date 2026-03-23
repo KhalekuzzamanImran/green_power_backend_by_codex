@@ -22,5 +22,3 @@ class DashboardAdmin(admin.ModelAdmin):
     list_display = ("name", "code", "client_type", "scope", "is_active")
     search_fields = ("name", "code")
     list_filter = ("client_type", "scope", "is_active")
-
-# Register your models here.

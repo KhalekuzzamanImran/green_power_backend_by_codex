@@ -1,10 +1,9 @@
 from rest_framework import viewsets
 
-from apps.access_control.models import OMClientAccess, UserClientAccess, UserPermissionOverride
+from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.access_control.serializers import (
     OMClientAccessSerializer,
     UserClientAccessSerializer,
-    UserPermissionOverrideSerializer,
 )
 from apps.audit_logs.models import AuditAction, AuditLog
 from apps.core.permissions import CanManageUsers
@@ -47,9 +46,3 @@ class OMClientAccessViewSet(AuditMixin, viewsets.ModelViewSet):
     serializer_class = OMClientAccessSerializer
     permission_classes = [CanManageUsers]
     audit_target_type = "OMClientAccess"
-
-class UserPermissionOverrideViewSet(AuditMixin, viewsets.ModelViewSet):
-    queryset = UserPermissionOverride.objects.select_related("user").all()
-    serializer_class = UserPermissionOverrideSerializer
-    permission_classes = [CanManageUsers]
-    audit_target_type = "UserPermissionOverride"

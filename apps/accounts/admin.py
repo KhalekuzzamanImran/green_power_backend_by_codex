@@ -11,5 +11,3 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = BaseUserAdmin.fieldsets + (
         ("Role Access", {"fields": ("role", "phone")}),
     )
-
-# Register your models here.

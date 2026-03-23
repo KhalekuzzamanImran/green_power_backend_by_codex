@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from apps.access_control.models import OMClientAccess, UserClientAccess, UserPermissionOverride
+from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.accounts.models import RoleChoices, User
 from apps.clients.models import Client
 from apps.dashboards.models import ClientType, DashboardScope
@@ -111,14 +111,6 @@ class Command(BaseCommand):
 
         OMClientAccess.objects.update_or_create(om_user=om_user, client=grid_client)
         OMClientAccess.objects.update_or_create(om_user=om_user, client=industry_client)
-
-        UserPermissionOverride.objects.update_or_create(
-            user=om_user,
-            defaults={
-                "can_set_threshold": True,
-                "can_view_all_clients": False,
-            },
-        )
 
         grid_device = self._upsert_device(
             client=grid_client,

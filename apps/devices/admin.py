@@ -22,5 +22,3 @@ class TopicDataAdmin(admin.ModelAdmin):
     list_display = ("topic", "recorded_at", "created_at")
     search_fields = ("topic__code", "topic__device__serial_number")
     list_filter = ("recorded_at",)
-
-# Register your models here.

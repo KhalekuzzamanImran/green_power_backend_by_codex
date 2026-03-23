@@ -32,5 +32,3 @@ class IntegrationSeedCommandTests(TestCase):
         self.assertTrue(Topic.objects.filter(code="mqtt_day_data").exists())
         self.assertTrue(Topic.objects.filter(code="mqtt_frz_data").exists())
         self.assertTrue(TopicData.objects.filter(topic__code="mqtt_rt_data").exists())
-
-# Create your tests here.

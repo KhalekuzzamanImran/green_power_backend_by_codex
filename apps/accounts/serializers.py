@@ -90,12 +90,8 @@ class MeSerializer(serializers.ModelSerializer):
 
     @extend_schema_field({"type": "object"})
     def get_permissions(self, obj):
-        override = getattr(obj, "permission_override", None)
         can_set_threshold = obj.role in {"ADMIN", "OM"}
         can_view_all_clients = obj.role == "ADMIN"
-        if override:
-            can_set_threshold = can_set_threshold or override.can_set_threshold
-            can_view_all_clients = can_view_all_clients or override.can_view_all_clients
         return {
             "can_manage_users": obj.role == "ADMIN",
             "can_set_threshold": can_set_threshold,

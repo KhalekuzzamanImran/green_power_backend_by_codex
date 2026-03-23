@@ -31,12 +31,3 @@ class OMClientAccess(BaseModel):
 
     def __str__(self):
         return f"{self.om_user.username} -> {self.client.name}"
-
-
-class UserPermissionOverride(BaseModel):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="permission_override")
-    can_set_threshold = models.BooleanField(default=False)
-    can_view_all_clients = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"Overrides for {self.user.username}"

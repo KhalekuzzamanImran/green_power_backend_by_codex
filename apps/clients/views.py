@@ -22,8 +22,6 @@ class ClientViewSet(viewsets.ModelViewSet):
         if user.role == RoleChoices.ADMIN:
             return queryset
         if user.role == RoleChoices.OM:
-            if getattr(user, "permission_override", None) and user.permission_override.can_view_all_clients:
-                return queryset
             client_ids = OMClientAccess.objects.filter(om_user=user).values_list("client_id", flat=True)
             return queryset.filter(id__in=client_ids)
         if user.role == RoleChoices.CLIENT:
