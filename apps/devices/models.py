@@ -34,6 +34,8 @@ class Topic(BaseModel):
 
     class Meta:
         ordering = ["name"]
+        verbose_name = "Device state"
+        verbose_name_plural = "Device states"
 
     def __str__(self):
         return f"{self.device.serial_number} -> {self.code}"
@@ -46,6 +48,8 @@ class TopicData(BaseModel):
 
     class Meta:
         ordering = ["-recorded_at"]
+        verbose_name = "Device data"
+        verbose_name_plural = "Device data"
 
     def __str__(self):
         return f"{self.topic.code} @ {self.recorded_at.isoformat()}"

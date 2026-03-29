@@ -35,4 +35,4 @@ def get_selected_client(user, client_id=None, require_selection=False):
 
 def get_accessible_clients_for_client_user(user):
     client_ids = get_client_accesses(user).values_list("client_id", flat=True)
-    return Client.objects.filter(id__in=client_ids).order_by("name")
+    return Client.objects.filter(id__in=client_ids).order_by("site_name")

@@ -1,11 +1,15 @@
+from django.test import TestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.access_control.models import OMClientAccess
 from apps.accounts.models import RoleChoices, User
-from apps.clients.models import Client
-from apps.dashboards.models import ClientType, DashboardScope
+from apps.clients.forms import ClientAdminForm
+from apps.clients.models import Client, ClientType
+from apps.dashboards.models import Dashboard, DashboardScope
+from apps.devices.models import Device, DeviceType
 
 
 class ClientAccessTests(APITestCase):
@@ -19,13 +23,13 @@ class ClientAccessTests(APITestCase):
         self.client_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
         self.scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
         self.client_allowed = Client.objects.create(
-            name="Allowed Client",
+            site_name="Allowed Client",
             code="ALLOWED",
             client_type=self.client_type,
             dashboard_scope=self.scope,
         )
         self.client_blocked = Client.objects.create(
-            name="Blocked Client",
+            site_name="Blocked Client",
             code="BLOCKED",
             client_type=self.client_type,
             dashboard_scope=self.scope,
@@ -53,7 +57,7 @@ class ClientSelfEndpointTests(APITestCase):
         self.client_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
         self.scope, _ = DashboardScope.objects.get_or_create(code="MANAGEMENT", defaults={"name": "Management Dashboard"})
         self.client_obj = Client.objects.create(
-            name="Self Client",
+            site_name="Self Client",
             code="SELF_CLIENT",
             client_type=self.client_type,
             dashboard_scope=self.scope,
@@ -85,13 +89,13 @@ class MultiClientSelectionTests(APITestCase):
         self.client_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
         self.scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
         self.client_one = Client.objects.create(
-            name="Client One",
+            site_name="Client One",
             code="CLIENT_ONE",
             client_type=self.client_type,
             dashboard_scope=self.scope,
         )
         self.client_two = Client.objects.create(
-            name="Client Two",
+            site_name="Client Two",
             code="CLIENT_TWO",
             client_type=self.client_type,
             dashboard_scope=self.scope,
@@ -119,3 +123,154 @@ class MultiClientSelectionTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["code"], "CLIENT_TWO")
+
+
+class ClientScopeValidationTests(APITestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            username="client_admin_user",
+            password="testpass123",
+            email="client-admin-user@example.com",
+            role=RoleChoices.ADMIN,
+        )
+        self.grid_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
+        self.industry_type, _ = ClientType.objects.get_or_create(code="INDUSTRY", defaults={"name": "Industry"})
+        self.main_scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
+        self.management_scope, _ = DashboardScope.objects.get_or_create(
+            code="MANAGEMENT",
+            defaults={"name": "Management Dashboard"},
+        )
+        self.board_scope, _ = DashboardScope.objects.get_or_create(code="BOARD", defaults={"name": "Board Dashboard"})
+        Dashboard.objects.get_or_create(
+            code="GRID_TIED_MAIN",
+            defaults={
+                "name": "Grid-Tied Main",
+                "client_type": self.grid_type,
+                "scope": self.main_scope,
+            },
+        )
+        Dashboard.objects.get_or_create(
+            code="GRID_TIED_MANAGEMENT",
+            defaults={
+                "name": "Grid-Tied Management",
+                "client_type": self.grid_type,
+                "scope": self.management_scope,
+            },
+        )
+        Dashboard.objects.get_or_create(
+            code="INDUSTRY_BOARD",
+            defaults={
+                "name": "Industry Board",
+                "client_type": self.industry_type,
+                "scope": self.board_scope,
+            },
+        )
+        refresh = RefreshToken.for_user(self.admin_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+    def test_api_rejects_scope_not_available_for_selected_client_type(self):
+        response = self.client.post(
+            "/api/v1/clients/",
+            {
+                "site_name": "Invalid Grid Site",
+                "code": "INVALID_GRID_SITE",
+                "client_type": str(self.grid_type.id),
+                "dashboard_scope": str(self.board_scope.id),
+                "address": "Dhaka",
+                "is_active": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("dashboard_scope", response.data)
+
+
+class ClientAdminScopeFilteringTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            username="django_admin",
+            password="testpass123",
+            email="django-admin@example.com",
+            role=RoleChoices.ADMIN,
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.grid_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
+        self.industry_type, _ = ClientType.objects.get_or_create(code="INDUSTRY", defaults={"name": "Industry"})
+        self.main_scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
+        self.management_scope, _ = DashboardScope.objects.get_or_create(
+            code="MANAGEMENT",
+            defaults={"name": "Management Dashboard"},
+        )
+        self.board_scope, _ = DashboardScope.objects.get_or_create(code="BOARD", defaults={"name": "Board Dashboard"})
+        Dashboard.objects.get_or_create(
+            code="GRID_TIED_MAIN",
+            defaults={
+                "name": "Grid-Tied Main",
+                "client_type": self.grid_type,
+                "scope": self.main_scope,
+            },
+        )
+        Dashboard.objects.get_or_create(
+            code="GRID_TIED_MANAGEMENT",
+            defaults={
+                "name": "Grid-Tied Management",
+                "client_type": self.grid_type,
+                "scope": self.management_scope,
+            },
+        )
+        Dashboard.objects.get_or_create(
+            code="INDUSTRY_BOARD",
+            defaults={
+                "name": "Industry Board",
+                "client_type": self.industry_type,
+                "scope": self.board_scope,
+            },
+        )
+
+    def test_admin_form_limits_dashboard_scopes_by_selected_client_type(self):
+        form = ClientAdminForm(data={"client_type": str(self.grid_type.id)})
+
+        returned_codes = set(form.fields["dashboard_scope"].queryset.values_list("code", flat=True))
+        self.assertEqual(returned_codes, {"MAIN", "MANAGEMENT"})
+
+    def test_admin_scope_options_endpoint_returns_only_matching_scopes(self):
+        self.client.login(username="django_admin", password="testpass123")
+
+        response = self.client.get(
+            reverse("hardened_admin:clients_client_dashboard_scope_options"),
+            {"client_type_id": str(self.grid_type.id)},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        returned_names = {item["name"] for item in response.json()["results"]}
+        self.assertEqual(returned_names, {"Main Dashboard", "Management Dashboard"})
+
+    def test_client_change_page_shows_installed_devices_inline(self):
+        client = Client.objects.create(
+            site_name="Client With Devices",
+            code="CLIENT_WITH_DEVICES",
+            client_type=self.grid_type,
+            dashboard_scope=self.main_scope,
+        )
+        Device.objects.create(
+            client=client,
+            name="Grid Alpha Inverter",
+            serial_number="GRID-ALPHA-INV-001",
+            device_type=DeviceType.SOLAR,
+        )
+        Device.objects.create(
+            client=client,
+            name="Grid Alpha BESS",
+            serial_number="GRID-ALPHA-BESS-001",
+            device_type=DeviceType.BESS,
+        )
+
+        self.client.login(username="django_admin", password="testpass123")
+        response = self.client.get(reverse("hardened_admin:clients_client_change", args=[client.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "Installed devices")
+        self.assertContains(response, "GRID-ALPHA-INV-001")
+        self.assertContains(response, "GRID-ALPHA-BESS-001")

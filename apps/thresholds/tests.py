@@ -6,8 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.accounts.models import RoleChoices, User
-from apps.clients.models import Client
-from apps.dashboards.models import ClientType, DashboardScope
+from apps.clients.models import Client, ClientType
+from apps.dashboards.models import DashboardScope
 from apps.devices.models import Device, DeviceType
 from apps.thresholds.models import DeviceThreshold
 
@@ -36,13 +36,13 @@ class ThresholdPermissionTests(APITestCase):
         self.industry_type, _ = ClientType.objects.get_or_create(code="INDUSTRY", defaults={"name": "Industry"})
         self.scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
         self.client_obj = Client.objects.create(
-            name="Threshold Client",
+            site_name="Threshold Client",
             code="THRESHOLD_CLIENT",
             client_type=self.grid_type,
             dashboard_scope=self.scope,
         )
         self.other_client_obj = Client.objects.create(
-            name="Other Client",
+            site_name="Other Client",
             code="OTHER_CLIENT",
             client_type=self.industry_type,
             dashboard_scope=self.scope,

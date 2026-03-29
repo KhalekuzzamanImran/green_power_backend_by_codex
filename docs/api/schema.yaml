@@ -1483,8 +1483,9 @@ components:
           type: string
           format: uuid
           readOnly: true
-        name:
+        site_name:
           type: string
+          title: Company / Site Name
           maxLength: 255
         code:
           type: string
@@ -1507,16 +1508,6 @@ components:
         dashboard_scope_name:
           type: string
           readOnly: true
-        contact_person:
-          type: string
-          maxLength: 255
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        phone:
-          type: string
-          maxLength: 20
         address:
           type: string
         is_active:
@@ -1539,7 +1530,7 @@ components:
       - dashboard_scope_code
       - dashboard_scope_name
       - id
-      - name
+      - site_name
       - updated_at
     ClientType:
       type: object
@@ -1666,7 +1657,7 @@ components:
         client:
           type: string
           format: uuid
-        client_name:
+        client_site_name:
           type: string
           readOnly: true
         name:
@@ -1693,7 +1684,7 @@ components:
           readOnly: true
       required:
       - client
-      - client_name
+      - client_site_name
       - created_at
       - device_type
       - id
@@ -1852,8 +1843,9 @@ components:
           type: string
           format: uuid
           readOnly: true
-        name:
+        site_name:
           type: string
+          title: Company / Site Name
           maxLength: 255
         code:
           type: string
@@ -1876,16 +1868,6 @@ components:
         dashboard_scope_name:
           type: string
           readOnly: true
-        contact_person:
-          type: string
-          maxLength: 255
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        phone:
-          type: string
-          maxLength: 20
         address:
           type: string
         is_active:
@@ -1908,7 +1890,7 @@ components:
         client:
           type: string
           format: uuid
-        client_name:
+        client_site_name:
           type: string
           readOnly: true
         name:

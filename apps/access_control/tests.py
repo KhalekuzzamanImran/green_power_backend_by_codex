@@ -4,8 +4,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.access_control.models import UserClientAccess
 from apps.accounts.models import RoleChoices, User
-from apps.clients.models import Client
-from apps.dashboards.models import ClientType, DashboardScope
+from apps.clients.models import Client, ClientType
+from apps.dashboards.models import DashboardScope
 
 
 class UserClientAccessValidationTests(APITestCase):
@@ -37,7 +37,7 @@ class UserClientAccessValidationTests(APITestCase):
         self.client_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
         self.scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
         self.client_obj = Client.objects.create(
-            name="Linked Client",
+            site_name="Linked Client",
             code="LINKED_CLIENT",
             client_type=self.client_type,
             dashboard_scope=self.scope,

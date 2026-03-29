@@ -16,7 +16,7 @@ class UserClientAccess(BaseModel):
         ]
 
     def __str__(self):
-        return f"{self.user.username} -> {self.client.name}"
+        return f"{self.user.username} -> {self.client.site_name}"
 
 
 class OMClientAccess(BaseModel):
@@ -30,4 +30,4 @@ class OMClientAccess(BaseModel):
         verbose_name_plural = "O&M client access"
 
     def __str__(self):
-        return f"{self.om_user.username} -> {self.client.name}"
+        return f"{self.om_user.username} -> {self.client.site_name}"

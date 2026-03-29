@@ -1,13 +1,6 @@
 from django.contrib import admin
 
-from apps.dashboards.models import ClientType, Dashboard, DashboardScope
-
-
-@admin.register(ClientType)
-class ClientTypeAdmin(admin.ModelAdmin):
-    list_display = ("name", "code", "is_active")
-    search_fields = ("name", "code")
-    list_filter = ("is_active",)
+from apps.dashboards.models import Dashboard, DashboardScope
 
 
 @admin.register(DashboardScope)

@@ -120,7 +120,7 @@ class MeSerializer(serializers.ModelSerializer):
         return [
             {
                 "id": str(client.id),
-                "name": client.name,
+                "site_name": client.site_name,
                 "code": client.code,
                 "client_type": client.client_type.code,
                 "dashboard_scope": client.dashboard_scope.code,

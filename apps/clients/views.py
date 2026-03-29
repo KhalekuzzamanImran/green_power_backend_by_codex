@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -6,9 +6,14 @@ from apps.access_control.models import OMClientAccess
 from apps.access_control.selectors import get_accessible_clients_for_client_user, get_selected_client
 from apps.accounts.models import RoleChoices
 from apps.audit_logs.models import AuditAction, AuditLog
-from apps.clients.models import Client
-from apps.clients.serializers import ClientSerializer
+from apps.clients.models import Client, ClientType
+from apps.clients.serializers import ClientSerializer, ClientTypeSerializer
 from apps.core.permissions import IsAdminOrReadOnly
+
+
+class ClientTypeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = ClientType.objects.filter(is_active=True).order_by("name")
+    serializer_class = ClientTypeSerializer
 
 
 class ClientViewSet(viewsets.ModelViewSet):
@@ -18,7 +23,7 @@ class ClientViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Client.objects.all().order_by("name")
+        queryset = Client.objects.all().order_by("site_name")
         if user.role == RoleChoices.ADMIN:
             return queryset
         if user.role == RoleChoices.OM:
@@ -35,7 +40,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             action=AuditAction.CREATE,
             target_type="Client",
             target_id=str(client.id),
-            description=f"Created client {client.name}",
+            description=f"Created client {client.site_name}",
         )
 
     def perform_update(self, serializer):
@@ -45,7 +50,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             action=AuditAction.UPDATE,
             target_type="Client",
             target_id=str(client.id),
-            description=f"Updated client {client.name}",
+            description=f"Updated client {client.site_name}",
         )
 
     def perform_destroy(self, instance):
@@ -54,7 +59,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             action=AuditAction.DELETE,
             target_type="Client",
             target_id=str(instance.id),
-            description=f"Deleted client {instance.name}",
+            description=f"Deleted client {instance.site_name}",
         )
         instance.delete()
 

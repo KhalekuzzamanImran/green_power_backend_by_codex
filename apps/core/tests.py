@@ -5,8 +5,8 @@ from django.test import TestCase
 
 from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.accounts.models import User
-from apps.clients.models import Client
-from apps.dashboards.models import ClientType, DashboardScope
+from apps.clients.models import Client, ClientType
+from apps.dashboards.models import DashboardScope
 from apps.devices.models import Device, Topic, TopicData
 
 
@@ -32,3 +32,5 @@ class IntegrationSeedCommandTests(TestCase):
         self.assertTrue(Topic.objects.filter(code="mqtt_day_data").exists())
         self.assertTrue(Topic.objects.filter(code="mqtt_frz_data").exists())
         self.assertTrue(TopicData.objects.filter(topic__code="mqtt_rt_data").exists())
+        self.assertGreaterEqual(TopicData.objects.count(), 120)
+        self.assertEqual(TopicData.objects.filter(topic__code="mqtt_rt_data").count(), 18)

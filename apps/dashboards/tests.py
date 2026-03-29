@@ -3,7 +3,8 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import RoleChoices, User
-from apps.dashboards.models import ClientType, Dashboard, DashboardScope
+from apps.clients.models import ClientType
+from apps.dashboards.models import Dashboard, DashboardScope
 
 
 class DashboardLookupTests(APITestCase):

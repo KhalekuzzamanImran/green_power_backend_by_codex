@@ -4,13 +4,8 @@ from rest_framework.response import Response
 
 from apps.accounts.models import RoleChoices
 from apps.access_control.selectors import get_selected_client
-from apps.dashboards.models import ClientType, Dashboard, DashboardScope
-from apps.dashboards.serializers import ClientTypeSerializer, DashboardScopeSerializer, DashboardSerializer
-
-
-class ClientTypeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    queryset = ClientType.objects.filter(is_active=True).order_by("name")
-    serializer_class = ClientTypeSerializer
+from apps.dashboards.models import Dashboard, DashboardScope
+from apps.dashboards.serializers import DashboardScopeSerializer, DashboardSerializer
 
 
 class DashboardScopeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):

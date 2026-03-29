@@ -1,20 +1,6 @@
 from rest_framework import serializers
 
-from apps.dashboards.models import ClientType, Dashboard, DashboardScope
-
-
-class ClientTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ClientType
-        fields = (
-            "id",
-            "code",
-            "name",
-            "is_active",
-            "created_at",
-            "updated_at",
-        )
-        read_only_fields = fields
+from apps.dashboards.models import Dashboard, DashboardScope
 
 
 class DashboardScopeSerializer(serializers.ModelSerializer):

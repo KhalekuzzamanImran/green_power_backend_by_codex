@@ -1,6 +1,21 @@
 from rest_framework import serializers
 
-from apps.clients.models import Client
+from apps.clients.models import Client, ClientType
+from apps.dashboards.models import Dashboard
+
+
+class ClientTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClientType
+        fields = (
+            "id",
+            "code",
+            "name",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -13,7 +28,7 @@ class ClientSerializer(serializers.ModelSerializer):
         model = Client
         fields = (
             "id",
-            "name",
+            "site_name",
             "code",
             "client_type",
             "client_type_code",
@@ -21,12 +36,25 @@ class ClientSerializer(serializers.ModelSerializer):
             "dashboard_scope",
             "dashboard_scope_code",
             "dashboard_scope_name",
-            "contact_person",
-            "email",
-            "phone",
             "address",
             "is_active",
             "created_at",
             "updated_at",
         )
         read_only_fields = ("id", "created_at", "updated_at")
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        client_type = attrs.get("client_type") or getattr(self.instance, "client_type", None)
+        dashboard_scope = attrs.get("dashboard_scope") or getattr(self.instance, "dashboard_scope", None)
+
+        if client_type and dashboard_scope and not Dashboard.objects.filter(
+            client_type=client_type,
+            scope=dashboard_scope,
+            is_active=True,
+        ).exists():
+            raise serializers.ValidationError(
+                {"dashboard_scope": "Selected dashboard scope is not available for this client type."}
+            )
+
+        return attrs

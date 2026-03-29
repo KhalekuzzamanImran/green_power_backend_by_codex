@@ -1,11 +1,13 @@
+from django.test import TestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.accounts.models import RoleChoices, User
-from apps.clients.models import Client
-from apps.dashboards.models import ClientType, DashboardScope
+from apps.clients.models import Client, ClientType
+from apps.dashboards.models import DashboardScope
 from apps.devices.models import Device, DeviceType, Topic, TopicData
 
 
@@ -27,13 +29,13 @@ class DeviceVisibilityTests(APITestCase):
         self.industry_type, _ = ClientType.objects.get_or_create(code="INDUSTRY", defaults={"name": "Industry"})
         self.scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
         self.client_allowed = Client.objects.create(
-            name="Client Allowed",
+            site_name="Client Allowed",
             code="CLIENT_ALLOWED",
             client_type=self.grid_type,
             dashboard_scope=self.scope,
         )
         self.client_other = Client.objects.create(
-            name="Client Other",
+            site_name="Client Other",
             code="CLIENT_OTHER",
             client_type=self.industry_type,
             dashboard_scope=self.scope,
@@ -145,7 +147,7 @@ class DeviceVisibilityTests(APITestCase):
 
     def test_multi_client_user_must_pass_client_id_for_devices(self):
         second_client = Client.objects.create(
-            name="Second Allowed Client",
+            site_name="Second Allowed Client",
             code="SECOND_ALLOWED",
             client_type=self.grid_type,
             dashboard_scope=self.scope,
@@ -162,7 +164,7 @@ class DeviceVisibilityTests(APITestCase):
 
     def test_multi_client_user_can_filter_devices_by_selected_client(self):
         second_client = Client.objects.create(
-            name="Second Allowed Client",
+            site_name="Second Allowed Client",
             code="SECOND_ALLOWED_2",
             client_type=self.grid_type,
             dashboard_scope=self.scope,
@@ -183,3 +185,83 @@ class DeviceVisibilityTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         serials = {row["serial_number"] for row in response.data}
         self.assertEqual(serials, {second_device.serial_number})
+
+
+class DeviceAdminStateInlineTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            username="device_admin",
+            password="testpass123",
+            email="device-admin@example.com",
+            role=RoleChoices.ADMIN,
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.client_type, _ = ClientType.objects.get_or_create(code="GRID_TIED", defaults={"name": "Grid-Tied"})
+        self.scope, _ = DashboardScope.objects.get_or_create(code="MAIN", defaults={"name": "Main Dashboard"})
+        self.client_obj = Client.objects.create(
+            site_name="Device State Client",
+            code="DEVICE_STATE_CLIENT",
+            client_type=self.client_type,
+            dashboard_scope=self.scope,
+        )
+        self.device = Device.objects.create(
+            client=self.client_obj,
+            name="Admin Device",
+            serial_number="ADMIN-DEVICE-001",
+            device_type=DeviceType.SOLAR,
+        )
+        Topic.objects.create(
+            device=self.device,
+            name="Inverter Status",
+            code="admin.device.inverter.status",
+            description="Operational state",
+        )
+        self.topic_alarm = Topic.objects.create(
+            device=self.device,
+            name="Inverter Alarm",
+            code="admin.device.inverter.alarm",
+            description="Alarm state",
+        )
+        TopicData.objects.create(
+            topic=self.topic_alarm,
+            payload={"value": "minor"},
+            recorded_at="2026-03-23T10:15:00Z",
+        )
+        TopicData.objects.create(
+            topic=self.topic_alarm,
+            payload={"value": "none"},
+            recorded_at="2026-03-23T10:20:00Z",
+        )
+
+    def test_device_change_page_shows_device_states_inline(self):
+        self.client.login(username="device_admin", password="testpass123")
+
+        response = self.client.get(reverse("hardened_admin:devices_device_change", args=[self.device.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "Device states")
+        self.assertContains(response, "admin.device.inverter.status")
+        self.assertContains(response, "admin.device.inverter.alarm")
+
+    def test_device_state_admin_shows_view_device_data_link(self):
+        self.client.login(username="device_admin", password="testpass123")
+
+        response = self.client.get(reverse("hardened_admin:devices_topic_changelist"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        expected_url = f'{reverse("hardened_admin:devices_topicdata_changelist")}?topic__id__exact={self.topic_alarm.id}'
+        self.assertContains(response, "View Device data")
+        self.assertContains(response, expected_url)
+
+    def test_view_device_data_link_opens_filtered_device_data_list(self):
+        self.client.login(username="device_admin", password="testpass123")
+
+        response = self.client.get(
+            reverse("hardened_admin:devices_topicdata_changelist"),
+            {"topic__id__exact": str(self.topic_alarm.id)},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "minor")
+        self.assertContains(response, "none")

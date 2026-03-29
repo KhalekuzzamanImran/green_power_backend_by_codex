@@ -4,9 +4,9 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import RoleChoices, User
-from apps.clients.models import Client
 from apps.access_control.models import UserClientAccess
-from apps.dashboards.models import ClientType, Dashboard, DashboardScope
+from apps.clients.models import Client, ClientType
+from apps.dashboards.models import Dashboard, DashboardScope
 
 
 class MeEndpointTests(APITestCase):
@@ -23,7 +23,7 @@ class MeEndpointTests(APITestCase):
             defaults={"name": "Management Dashboard"},
         )
         self.client_obj = Client.objects.create(
-            name="Client A",
+            site_name="Client A",
             code="CLIENT_A",
             client_type=self.client_type,
             dashboard_scope=self.scope,

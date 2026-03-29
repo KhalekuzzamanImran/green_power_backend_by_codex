@@ -4,14 +4,14 @@ from apps.devices.models import Device, Topic, TopicData
 
 
 class DeviceSerializer(serializers.ModelSerializer):
-    client_name = serializers.CharField(source="client.name", read_only=True)
+    client_site_name = serializers.CharField(source="client.site_name", read_only=True)
 
     class Meta:
         model = Device
         fields = (
             "id",
             "client",
-            "client_name",
+            "client_site_name",
             "name",
             "serial_number",
             "device_type",

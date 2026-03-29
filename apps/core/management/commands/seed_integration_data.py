@@ -7,8 +7,8 @@ from django.utils import timezone
 
 from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.accounts.models import RoleChoices, User
-from apps.clients.models import Client
-from apps.dashboards.models import ClientType, DashboardScope
+from apps.clients.models import Client, ClientType
+from apps.dashboards.models import DashboardScope
 from apps.devices.models import Device, DeviceType, Topic, TopicData
 from apps.thresholds.models import DeviceThreshold
 
@@ -76,12 +76,9 @@ class Command(BaseCommand):
         grid_client, _ = Client.objects.update_or_create(
             code="GRID_SITE_ALPHA",
             defaults={
-                "name": "Grid Site Alpha",
+                "site_name": "Grid Site Alpha",
                 "client_type": grid_type,
                 "dashboard_scope": management_scope,
-                "contact_person": "Grid Manager",
-                "email": "alpha.client@greenpower.local",
-                "phone": "01800000001",
                 "address": "Dhaka, Bangladesh",
                 "is_active": True,
             },
@@ -89,12 +86,9 @@ class Command(BaseCommand):
         industry_client, _ = Client.objects.update_or_create(
             code="INDUSTRY_SITE_BETA",
             defaults={
-                "name": "Industry Site Beta",
+                "site_name": "Industry Site Beta",
                 "client_type": industry_type,
                 "dashboard_scope": board_scope,
-                "contact_person": "Board Office",
-                "email": "beta.client@greenpower.local",
-                "phone": "01800000002",
                 "address": "Chattogram, Bangladesh",
                 "is_active": True,
             },
@@ -185,45 +179,53 @@ class Command(BaseCommand):
         self._upsert_threshold(industry_device, "current_max", Decimal("125.00"), "A", om_user)
 
         now = timezone.now()
-        self._upsert_topic_data(
+        self._reset_topic_data_series(
             mqtt_rt_topic,
-            recorded_at=now - timedelta(minutes=4),
-            payload={"value": 52.3, "unit": "kW"},
+            start_time=now - timedelta(minutes=120),
+            points=18,
+            payload_factory=lambda index: {"value": round(52.3 + (index * 0.35), 2), "unit": "kW"},
         )
-        self._upsert_topic_data(
+        self._reset_topic_data_series(
             mqtt_eny_topic,
-            recorded_at=now - timedelta(minutes=4),
-            payload={"value": 1245.7, "unit": "kWh"},
+            start_time=now - timedelta(minutes=120),
+            points=18,
+            payload_factory=lambda index: {"value": round(1245.7 + (index * 3.8), 2), "unit": "kWh"},
         )
-        self._upsert_topic_data(
+        self._reset_topic_data_series(
             mqtt_day_topic,
-            recorded_at=now - timedelta(minutes=4),
-            payload={"value": 186.2, "unit": "kWh"},
+            start_time=now - timedelta(minutes=120),
+            points=18,
+            payload_factory=lambda index: {"value": round(186.2 + (index * 1.1), 2), "unit": "kWh"},
         )
-        self._upsert_topic_data(
+        self._reset_topic_data_series(
             mqtt_frz_topic,
-            recorded_at=now - timedelta(minutes=4),
-            payload={"value": 180.9, "unit": "kWh"},
+            start_time=now - timedelta(minutes=120),
+            points=18,
+            payload_factory=lambda index: {"value": round(180.9 + (index * 0.9), 2), "unit": "kWh"},
         )
-        self._upsert_topic_data(
+        self._reset_topic_data_series(
             grid_inverter_status_topic,
-            recorded_at=now - timedelta(minutes=3),
-            payload={"value": "healthy"},
+            start_time=now - timedelta(minutes=120),
+            points=12,
+            payload_factory=lambda index: {"value": "healthy" if index % 4 else "warning"},
         )
-        self._upsert_topic_data(
+        self._reset_topic_data_series(
             grid_inverter_alarm_topic,
-            recorded_at=now - timedelta(minutes=3),
-            payload={"value": "none"},
+            start_time=now - timedelta(minutes=120),
+            points=12,
+            payload_factory=lambda index: {"value": "none" if index % 5 else "minor"},
         )
-        self._upsert_topic_data(
+        self._reset_topic_data_series(
             bess_soc_topic,
-            recorded_at=now - timedelta(minutes=2),
-            payload={"value": 81.2, "unit": "%"},
+            start_time=now - timedelta(minutes=120),
+            points=18,
+            payload_factory=lambda index: {"value": round(81.2 - (index * 0.4), 2), "unit": "%"},
         )
-        self._upsert_topic_data(
+        self._reset_topic_data_series(
             industry_frequency_topic,
-            recorded_at=now - timedelta(minutes=1),
-            payload={"value": 49.9, "unit": "Hz"},
+            start_time=now - timedelta(minutes=120),
+            points=12,
+            payload_factory=lambda index: {"value": round(49.9 + ((index % 3) * 0.05), 2), "unit": "Hz"},
         )
 
         self.stdout.write(self.style.SUCCESS("Integration seed complete."))
@@ -286,9 +288,15 @@ class Command(BaseCommand):
         )
         return topic
 
-    def _upsert_topic_data(self, topic, recorded_at, payload):
-        TopicData.objects.update_or_create(
-            topic=topic,
-            recorded_at=recorded_at,
-            defaults={"payload": payload},
+    def _reset_topic_data_series(self, topic, *, start_time, points, payload_factory):
+        topic.data_points.all().delete()
+        TopicData.objects.bulk_create(
+            [
+                TopicData(
+                    topic=topic,
+                    recorded_at=start_time + timedelta(minutes=index),
+                    payload=payload_factory(index),
+                )
+                for index in range(points)
+            ]
         )

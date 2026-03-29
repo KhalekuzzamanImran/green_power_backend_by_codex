@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 
-from apps.dashboards.models import ClientType, Dashboard, DashboardScope
+from apps.clients.models import ClientType
+from apps.dashboards.models import Dashboard, DashboardScope
 
 
 MASTER_DASHBOARDS = [
