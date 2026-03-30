@@ -244,6 +244,22 @@ class DeviceAdminStateInlineTests(TestCase):
         self.assertContains(response, "admin.device.inverter.status")
         self.assertContains(response, "admin.device.inverter.alarm")
 
+    def test_device_admin_list_shows_client_name_with_code(self):
+        self.client.login(username="device_admin", password="testpass123")
+
+        response = self.client.get(reverse("hardened_admin:devices_device_changelist"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "Device State Client (DEVICE_STATE_CLIENT)")
+
+    def test_device_admin_form_shows_client_choices_as_name_with_code(self):
+        self.client.login(username="device_admin", password="testpass123")
+
+        response = self.client.get(reverse("hardened_admin:devices_device_add"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "Device State Client (DEVICE_STATE_CLIENT)")
+
     def test_device_state_admin_shows_view_device_data_link(self):
         self.client.login(username="device_admin", password="testpass123")
 

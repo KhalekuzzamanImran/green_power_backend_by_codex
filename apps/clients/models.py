@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.models import BaseModel
+from apps.clients.utils import generate_unique_client_code, normalize_client_code
 
 
 class ClientType(BaseModel):
@@ -32,12 +33,27 @@ class Client(BaseModel):
         super().clean()
         from apps.dashboards.models import Dashboard
 
+        if self.code:
+            self.code = normalize_client_code(self.code)
+            duplicate_qs = Client.objects.filter(code=self.code)
+            if self.pk:
+                duplicate_qs = duplicate_qs.exclude(pk=self.pk)
+            if duplicate_qs.exists():
+                raise ValidationError({"code": "Client code must be unique."})
+
         if self.client_type_id and self.dashboard_scope_id and not Dashboard.objects.filter(
             client_type_id=self.client_type_id,
             scope_id=self.dashboard_scope_id,
             is_active=True,
         ).exists():
             raise ValidationError({"dashboard_scope": "Selected dashboard scope is not available for this client type."})
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = normalize_client_code(self.code)
+        else:
+            self.code = generate_unique_client_code(self.site_name, model=type(self), exclude_client_id=self.pk)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.site_name

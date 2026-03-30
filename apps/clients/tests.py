@@ -185,6 +185,59 @@ class ClientScopeValidationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("dashboard_scope", response.data)
 
+    def test_api_auto_generates_unique_code_when_omitted(self):
+        first_response = self.client.post(
+            "/api/v1/clients/",
+            {
+                "site_name": "Auto Generated Site",
+                "client_type": str(self.grid_type.id),
+                "dashboard_scope": str(self.main_scope.id),
+                "address": "Dhaka",
+                "is_active": True,
+            },
+            format="json",
+        )
+        second_response = self.client.post(
+            "/api/v1/clients/",
+            {
+                "site_name": "Auto Generated Site",
+                "client_type": str(self.grid_type.id),
+                "dashboard_scope": str(self.main_scope.id),
+                "address": "Dhaka",
+                "is_active": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(first_response.data["code"], "AUTO_GENERATED_SITE")
+        self.assertEqual(second_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.data["code"], "AUTO_GENERATED_SITE_2")
+
+    def test_api_rejects_duplicate_manual_code(self):
+        Client.objects.create(
+            site_name="Existing Site",
+            code="EXISTING_SITE",
+            client_type=self.grid_type,
+            dashboard_scope=self.main_scope,
+        )
+
+        response = self.client.post(
+            "/api/v1/clients/",
+            {
+                "site_name": "Another Site",
+                "code": "existing site",
+                "client_type": str(self.grid_type.id),
+                "dashboard_scope": str(self.main_scope.id),
+                "address": "Dhaka",
+                "is_active": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("code", response.data)
+
 
 class ClientAdminScopeFilteringTests(TestCase):
     def setUp(self):
@@ -246,6 +299,41 @@ class ClientAdminScopeFilteringTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         returned_names = {item["name"] for item in response.json()["results"]}
         self.assertEqual(returned_names, {"Main Dashboard", "Management Dashboard"})
+
+    def test_admin_code_suggestion_endpoint_returns_unique_code(self):
+        Client.objects.create(
+            site_name="Grid Site Alpha",
+            code="GRID_SITE_ALPHA",
+            client_type=self.grid_type,
+            dashboard_scope=self.main_scope,
+        )
+        self.client.login(username="django_admin", password="testpass123")
+
+        response = self.client.get(
+            reverse("hardened_admin:clients_client_code_suggestion"),
+            {"site_name": "Grid Site Alpha"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["code"], "GRID_SITE_ALPHA_2")
+
+    def test_admin_code_validation_endpoint_rejects_duplicate_manual_code(self):
+        Client.objects.create(
+            site_name="Grid Site Alpha",
+            code="GRID_SITE_ALPHA",
+            client_type=self.grid_type,
+            dashboard_scope=self.main_scope,
+        )
+        self.client.login(username="django_admin", password="testpass123")
+
+        response = self.client.get(
+            reverse("hardened_admin:clients_client_code_validation"),
+            {"code": "grid site alpha"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["normalized_code"], "GRID_SITE_ALPHA")
+        self.assertFalse(response.json()["is_available"])
 
     def test_client_change_page_shows_installed_devices_inline(self):
         client = Client.objects.create(

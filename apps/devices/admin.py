@@ -19,10 +19,20 @@ class DeviceAdmin(admin.ModelAdmin):
         def has_add_permission(self, request, obj=None):
             return False
 
-    list_display = ("name", "serial_number", "device_type", "client", "is_active")
+    list_display = ("name", "serial_number", "device_type", "client_display", "is_active")
     search_fields = ("name", "serial_number", "client__site_name")
     list_filter = ("device_type", "is_active")
     inlines = (TopicInline,)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "client" and formfield is not None:
+            formfield.label_from_instance = lambda client: f"{client.site_name} ({client.code})"
+        return formfield
+
+    @admin.display(description="Client")
+    def client_display(self, obj):
+        return f"{obj.client.site_name} ({obj.client.code})"
 
 
 @admin.register(Topic)

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "1f319963-5212-49c1-9f80-b593e117e04a",
     "name": "Green Power Backend Codex",
-    "description": "Ready-to-import Postman collection for the Green Power backend. Update collection variables if needed, run Login first, then the client-aware requests.",
+    "description": "Ready-to-import Postman collection for the Green Power backend. Update collection variables if needed, run Login first, then the client-aware requests. Client create examples use the current API contract with `site_name` and optional `code`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -60,6 +60,14 @@
     {
       "key": "dashboard_scope",
       "value": "MANAGEMENT"
+    },
+    {
+      "key": "client_type_id",
+      "value": ""
+    },
+    {
+      "key": "dashboard_scope_id",
+      "value": ""
     }
   ],
   "item": [
@@ -533,6 +541,22 @@
       "item": [
         {
           "name": "Client Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (Array.isArray(data) && data.length > 0) {",
+                  "  const preferred = data.find(item => item.code === pm.collectionVariables.get('dashboard_client_type')) || data[0];",
+                  "  pm.collectionVariables.set('client_type_id', preferred.id);",
+                  "}",
+                  ""
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {
@@ -551,6 +575,22 @@
         },
         {
           "name": "Dashboard Scopes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (Array.isArray(data) && data.length > 0) {",
+                  "  const preferred = data.find(item => item.code === pm.collectionVariables.get('dashboard_scope')) || data[0];",
+                  "  pm.collectionVariables.set('dashboard_scope_id', preferred.id);",
+                  "}",
+                  ""
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {
@@ -585,6 +625,62 @@
                 "api",
                 "v1",
                 "users",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Client Auto Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"site_name\": \"New Auto Generated Site\",\n  \"client_type\": \"{{client_type_id}}\",\n  \"dashboard_scope\": \"{{dashboard_scope_id}}\",\n  \"address\": \"Dhaka, Bangladesh\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Client Manual Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"site_name\": \"New Manual Code Site\",\n  \"code\": \"CUSTOM_SITE_CODE\",\n  \"client_type\": \"{{client_type_id}}\",\n  \"dashboard_scope\": \"{{dashboard_scope_id}}\",\n  \"address\": \"Dhaka, Bangladesh\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients",
                 ""
               ]
             }

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.clients.models import Client, ClientType
+from apps.clients.utils import generate_unique_client_code, normalize_client_code
 from apps.dashboards.models import Dashboard
 
 
@@ -42,11 +43,31 @@ class ClientSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("id", "created_at", "updated_at")
+        extra_kwargs = {
+            "code": {"required": False, "allow_blank": True},
+        }
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
         client_type = attrs.get("client_type") or getattr(self.instance, "client_type", None)
         dashboard_scope = attrs.get("dashboard_scope") or getattr(self.instance, "dashboard_scope", None)
+        code = attrs.get("code")
+        site_name = attrs.get("site_name") or getattr(self.instance, "site_name", "")
+
+        if code:
+            normalized_code = normalize_client_code(code)
+            duplicate_qs = Client.objects.filter(code=normalized_code)
+            if self.instance:
+                duplicate_qs = duplicate_qs.exclude(pk=self.instance.pk)
+            if duplicate_qs.exists():
+                raise serializers.ValidationError({"code": "Client code must be unique."})
+            attrs["code"] = normalized_code
+        else:
+            attrs["code"] = generate_unique_client_code(
+                site_name,
+                model=Client,
+                exclude_client_id=getattr(self.instance, "pk", None),
+            )
 
         if client_type and dashboard_scope and not Dashboard.objects.filter(
             client_type=client_type,
