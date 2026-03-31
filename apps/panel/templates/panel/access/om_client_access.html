@@ -1,0 +1,26 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section panel-section-managed">
+    <div class="panel-section-header">
+      <h2>O&amp;M Client Access</h2>
+      <a class="panel-button panel-button-link" href="{% url 'panel:om-client-access-add' %}">Assign O&amp;M Access</a>
+    </div>
+    <table class="panel-table">
+      <thead><tr><th>O&amp;M User</th><th>Client</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for assignment in assignments %}
+          <tr>
+            <td>{{ assignment.om_user.username }}</td>
+            <td>{{ assignment.client.site_name }} ({{ assignment.client.code }})</td>
+            <td>
+              <div class="panel-actions">
+                <a href="{% url 'panel:om-client-access-edit' assignment.id %}">Edit</a>
+                <a href="{% url 'panel:om-client-access-delete' assignment.id %}">Delete</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

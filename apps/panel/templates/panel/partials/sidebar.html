@@ -1,0 +1,61 @@
+{% load panel_nav %}
+<aside class="panel-sidebar">
+  <div class="panel-sidebar-header">
+    <div class="panel-brand">
+      <a href="{% url 'panel:home' %}">
+        <span class="panel-brand-full">Green Power EMS</span>
+        <span class="panel-brand-compact">GP</span>
+      </a>
+    </div>
+  </div>
+  <nav class="panel-nav">
+    {% for section in nav_items %}
+      {% if section.items %}
+        <section class="panel-nav-group" data-panel-nav-group data-group-key="{{ section.key }}">
+          <button
+            type="button"
+            class="panel-nav-group-toggle"
+            data-panel-nav-group-toggle
+            aria-expanded="false"
+            title="{{ section.label }}"
+          >
+            <span class="panel-nav-link-icon panel-nav-group-icon" aria-hidden="true">{% panel_icon section.icon %}</span>
+            <span class="panel-nav-group-label">{{ section.label }}</span>
+            <span class="panel-nav-group-chevron" aria-hidden="true">&rsaquo;</span>
+          </button>
+          <div class="panel-nav-group-links" data-panel-nav-group-links>
+            {% for item in section.items %}
+              <a
+                class="panel-nav-sublink {% panel_active active_nav_key item.key %}"
+                href="{{ item.url }}"
+                title="{{ item.label }}"
+              >
+                <span class="panel-nav-sublink-bullet" aria-hidden="true"></span>
+                <span class="panel-nav-sublink-text">{{ item.label }}</span>
+              </a>
+            {% endfor %}
+          </div>
+        </section>
+      {% else %}
+        <a
+          class="panel-nav-link {% panel_active active_nav_key section.key %}"
+          href="{{ section.url }}"
+          title="{{ section.label }}"
+        >
+          <span class="panel-nav-link-icon" aria-hidden="true">{% panel_icon section.icon %}</span>
+          <span class="panel-nav-link-text">{{ section.label }}</span>
+        </a>
+      {% endif %}
+    {% endfor %}
+  </nav>
+  <div class="panel-sidebar-footer">
+    <button type="button" class="panel-account-card" title="{{ request.user.get_full_name|default:request.user.username }}">
+      <span class="panel-account-avatar" aria-hidden="true">{{ request.user.username|slice:":2"|upper }}</span>
+      <span class="panel-account-copy">
+        <span class="panel-account-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <span class="panel-account-email">{{ request.user.email }}</span>
+      </span>
+      <span class="panel-account-chevron" aria-hidden="true">&harr;</span>
+    </button>
+  </div>
+</aside>

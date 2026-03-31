@@ -1,0 +1,25 @@
+{% if clients %}
+  <table class="panel-table">
+    <thead><tr><th>Company / Site Name</th><th>Code</th><th>Type</th><th>Scope</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for client in clients %}
+        <tr>
+          <td><a href="{% url 'panel:client-detail' client.id %}?client_id={{ client.id }}">{{ client.site_name }}</a></td>
+          <td>{{ client.code }}</td>
+          <td>{{ client.client_type.name }}</td>
+          <td>{{ client.dashboard_scope.name }}</td>
+          <td>
+            {% if request.user.role == "ADMIN" %}
+              <div class="panel-actions">
+                <a href="{% url 'panel:client-edit' client.id %}">Edit</a>
+                <a href="{% url 'panel:client-delete' client.id %}">Delete</a>
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  {% include "panel/partials/empty_state.html" with title="No clients" message="No clients are available for the current filters." %}
+{% endif %}

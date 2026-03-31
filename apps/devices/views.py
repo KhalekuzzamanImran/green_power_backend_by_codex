@@ -3,10 +3,11 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.access_control.models import OMClientAccess
-from apps.access_control.selectors import get_selected_client
+from apps.access_control.selectors import get_accessible_clients_for_om_user, get_selected_client
 from apps.accounts.models import RoleChoices
-from apps.audit_logs.models import AuditAction, AuditLog
+from apps.audit_logs.mixins import AuditModelViewSetMixin
+from apps.audit_logs.models import AuditAction
+from apps.audit_logs.services import get_action_label
 from apps.core.permissions import IsAdminOrReadOnly
 from apps.devices.models import Device, Topic, TopicData
 from apps.devices.serializers import DeviceSerializer, TopicDataSerializer, TopicSerializer
@@ -17,8 +18,7 @@ def get_accessible_devices(user, client_id=None, require_selection=False):
     if user.role == RoleChoices.ADMIN:
         return queryset
     if user.role == RoleChoices.OM:
-        client_ids = OMClientAccess.objects.filter(om_user=user).values_list("client_id", flat=True)
-        return queryset.filter(client_id__in=client_ids)
+        return queryset.filter(client__in=get_accessible_clients_for_om_user(user))
     if user.role == RoleChoices.CLIENT:
         client = get_selected_client(user, client_id=client_id, require_selection=require_selection)
         if client:
@@ -40,7 +40,7 @@ def get_accessible_topic_data(user, client_id=None, require_selection=False):
         "topic__device",
     )
 
-class DeviceViewSet(viewsets.ModelViewSet):
+class DeviceViewSet(AuditModelViewSetMixin, viewsets.ModelViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
     permission_classes = [IsAdminOrReadOnly]
@@ -59,35 +59,8 @@ class DeviceViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(device_type=device_type)
         return queryset.order_by("name")
 
-    def perform_create(self, serializer):
-        device = serializer.save()
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.CREATE,
-            target_type="Device",
-            target_id=str(device.id),
-            description=f"Created device {device.serial_number}",
-        )
-
-    def perform_update(self, serializer):
-        device = serializer.save()
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.UPDATE,
-            target_type="Device",
-            target_id=str(device.id),
-            description=f"Updated device {device.serial_number}",
-        )
-
-    def perform_destroy(self, instance):
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.DELETE,
-            target_type="Device",
-            target_id=str(instance.id),
-            description=f"Deleted device {instance.serial_number}",
-        )
-        instance.delete()
+    def get_audit_description(self, action, instance):
+        return f"{get_action_label(action)} device {instance.serial_number}"
 
     @action(detail=True, methods=["get"], url_path="topics")
     def topics(self, request, pk=None):
@@ -97,7 +70,7 @@ class DeviceViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class TopicViewSet(viewsets.ModelViewSet):
+class TopicViewSet(AuditModelViewSetMixin, viewsets.ModelViewSet):
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
     permission_classes = [IsAdminOrReadOnly]
@@ -116,35 +89,8 @@ class TopicViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(device__client_id=client_id)
         return queryset.order_by("name")
 
-    def perform_create(self, serializer):
-        topic = serializer.save()
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.CREATE,
-            target_type="Topic",
-            target_id=str(topic.id),
-            description=f"Created topic {topic.code}",
-        )
-
-    def perform_update(self, serializer):
-        topic = serializer.save()
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.UPDATE,
-            target_type="Topic",
-            target_id=str(topic.id),
-            description=f"Updated topic {topic.code}",
-        )
-
-    def perform_destroy(self, instance):
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.DELETE,
-            target_type="Topic",
-            target_id=str(instance.id),
-            description=f"Deleted topic {instance.code}",
-        )
-        instance.delete()
+    def get_audit_description(self, action, instance):
+        return f"{get_action_label(action)} device state {instance.code}"
 
     @action(detail=True, methods=["get"], url_path="data")
     def data(self, request, pk=None):
@@ -170,10 +116,12 @@ class TopicViewSet(viewsets.ModelViewSet):
         return Response(serializer.data if data else None)
 
 
-class TopicDataViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class TopicDataViewSet(AuditModelViewSetMixin, mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = TopicData.objects.all()
     serializer_class = TopicDataSerializer
     permission_classes = [IsAdminOrReadOnly]
+    audit_action_update = AuditAction.UPDATE
+    audit_action_delete = AuditAction.DELETE
 
     def get_queryset(self):
         queryset = get_accessible_topic_data(
@@ -191,3 +139,6 @@ class TopicDataViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixin
         if device_id:
             queryset = queryset.filter(topic__device_id=device_id)
         return queryset.order_by("-recorded_at")
+
+    def get_audit_description(self, action, instance):
+        return f"{get_action_label(action)} device data row for {instance.topic.code}"

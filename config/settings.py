@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'apps.access_control',
     'apps.thresholds',
     'apps.audit_logs',
+    'apps.panel',
 ]
 
 MIDDLEWARE = [
@@ -129,6 +130,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = "accounts.User"
+LOGIN_URL = "/panel/login/"
+LOGIN_REDIRECT_URL = "/panel/"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

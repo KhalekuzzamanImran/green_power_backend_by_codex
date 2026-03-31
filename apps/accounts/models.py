@@ -20,8 +20,11 @@ class User(BaseModel, AbstractUser):
     class Meta:
         db_table = "users"
         ordering = ["username"]
+        indexes = [
+            models.Index(fields=["role", "is_active"], name="user_role_active_idx"),
+            models.Index(fields=["first_name"], name="user_first_name_idx"),
+            models.Index(fields=["last_name"], name="user_last_name_idx"),
+        ]
 
     def __str__(self):
         return f"{self.username} ({self.role})"
-
-# Create your models here.

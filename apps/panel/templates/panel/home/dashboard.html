@@ -1,0 +1,79 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-card-grid">
+    {% for card in cards %}
+      <article class="panel-card">
+        <span class="panel-card-label">{{ card.label }}</span>
+        <strong class="panel-card-value">{{ card.value }}</strong>
+      </article>
+    {% endfor %}
+  </section>
+
+  <section class="panel-section">
+    <div class="panel-section-header">
+      <h2>Recent Devices</h2>
+    </div>
+    {% if recent_devices %}
+      <table class="panel-table">
+        <thead><tr><th>Name</th><th>Serial</th><th>Client</th></tr></thead>
+        <tbody>
+          {% for device in recent_devices %}
+            <tr>
+              <td><a href="{% url 'panel:device-detail' device.id %}?client_id={{ device.client_id }}">{{ device.name }}</a></td>
+              <td>{{ device.serial_number }}</td>
+              <td>{{ device.client.site_name }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "panel/partials/empty_state.html" with title="No devices" message="No devices are available for the current scope." %}
+    {% endif %}
+  </section>
+
+  <section class="panel-section panel-grid-two">
+    <div class="panel-subsection">
+      <h2>Recent Device States</h2>
+      {% if recent_states %}
+        <ul class="panel-list">
+          {% for state in recent_states %}
+            <li><a href="{% url 'panel:device-state-detail' state.id %}?client_id={{ state.device.client_id }}">{{ state.code }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {% include "panel/partials/empty_state.html" with title="No device states" message="No device states are available." %}
+      {% endif %}
+    </div>
+    <div class="panel-subsection">
+      <h2>Latest Device Data</h2>
+      {% if latest_data %}
+        <ul class="panel-list">
+          {% for row in latest_data %}
+            <li>{{ row.topic.code }}: {{ row.payload }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {% include "panel/partials/empty_state.html" with title="No data" message="No device data is available." %}
+      {% endif %}
+    </div>
+  </section>
+
+  {% if recent_audit_logs %}
+    <section class="panel-section">
+      <h2>Recent Audit Logs</h2>
+      <table class="panel-table">
+        <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Description</th></tr></thead>
+        <tbody>
+          {% for log in recent_audit_logs %}
+            <tr>
+              <td>{{ log.created_at }}</td>
+              <td>{{ log.actor|default:"-" }}</td>
+              <td>{{ log.action }}</td>
+              <td>{{ log.description }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endif %}
+{% endblock %}

@@ -5,6 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import RoleChoices, User
 from apps.access_control.models import UserClientAccess
+from apps.audit_logs.models import AuditAction, AuditLog
 from apps.clients.models import Client, ClientType
 from apps.dashboards.models import Dashboard, DashboardScope
 
@@ -89,3 +90,24 @@ class AdminHardeningTests(TestCase):
 
         self.assertTrue(logged_in)
         self.assertEqual(response.status_code, 200)
+
+
+class AuthAuditTests(APITestCase):
+    def test_api_login_writes_audit_log(self):
+        User.objects.create_user(
+            username="api_login_user",
+            password="testpass123",
+            email="api-login-user@example.com",
+            role=RoleChoices.ADMIN,
+        )
+
+        response = self.client.post(
+            "/api/v1/auth/login/",
+            {"username": "api_login_user", "password": "testpass123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        audit_log = AuditLog.objects.get(action=AuditAction.LOGIN)
+        self.assertEqual(audit_log.actor.username, "api_login_user")
+        self.assertEqual(audit_log.metadata["source"], "api")

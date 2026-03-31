@@ -1,0 +1,42 @@
+{% extends "panel/base.html" %}
+{% load static %}
+{% block content %}
+  <section class="panel-section panel-section-tight-top">
+    <div class="panel-section-header">
+      <h2>{{ page_heading }}</h2>
+    </div>
+    <form method="post" class="panel-form-grid">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <ul class="panel-form-errors">
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% for field in form %}
+        <div class="panel-form-row">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <div class="panel-form-help">{{ field.help_text }}</div>
+          {% endif %}
+          {% if field.errors %}
+            <ul class="panel-form-errors">
+              {% for error in field.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="panel-inline-form-actions">
+        <button type="submit" class="panel-button">{{ submit_label }}</button>
+        <a class="panel-button panel-button-secondary panel-button-link" href="{{ cancel_url }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+{% block extra_js %}
+  <script src="{% static 'panel/js/client_form.js' %}"></script>
+{% endblock %}

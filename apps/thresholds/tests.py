@@ -100,6 +100,7 @@ class ThresholdPermissionTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_om_cannot_create_threshold_for_unassigned_device(self):
+        OMClientAccess.objects.create(om_user=self.other_om_user, client=self.other_client_obj)
         refresh = RefreshToken.for_user(self.other_om_user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 

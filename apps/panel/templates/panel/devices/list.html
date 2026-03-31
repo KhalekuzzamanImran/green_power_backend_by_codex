@@ -1,0 +1,36 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section panel-section-managed">
+    <div class="panel-section-header">
+      <h2>Devices</h2>
+      {% if request.user.role == "ADMIN" %}
+        <a class="panel-button panel-button-link" href="{% url 'panel:device-add' %}">Add Device</a>
+      {% endif %}
+    </div>
+    {% if devices %}
+      <table class="panel-table">
+        <thead><tr><th>Name</th><th>Serial</th><th>Client</th><th>Type</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for device in devices %}
+            <tr>
+              <td><a href="{% url 'panel:device-detail' device.id %}?client_id={{ device.client_id }}">{{ device.name }}</a></td>
+              <td>{{ device.serial_number }}</td>
+              <td>{{ device.client.site_name }} ({{ device.client.code }})</td>
+              <td>{{ device.get_device_type_display }}</td>
+              <td>
+                {% if request.user.role == "ADMIN" %}
+                  <div class="panel-actions">
+                    <a href="{% url 'panel:device-edit' device.id %}">Edit</a>
+                    <a href="{% url 'panel:device-delete' device.id %}">Delete</a>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "panel/partials/empty_state.html" with title="No devices" message="No devices match the current scope." %}
+    {% endif %}
+  </section>
+{% endblock %}

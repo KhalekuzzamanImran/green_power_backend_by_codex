@@ -1,0 +1,27 @@
+{% if users %}
+  <table class="panel-table">
+    <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for user_obj in users %}
+        <tr>
+          <td>{{ user_obj.username }}</td>
+          <td>{{ user_obj.get_full_name|default:"-" }}</td>
+          <td>{{ user_obj.role }}</td>
+          <td>{% if user_obj.is_active %}Active{% else %}Inactive{% endif %}</td>
+          <td>
+            {% if request.user.role == "ADMIN" %}
+              <div class="panel-actions">
+                <a href="{% url 'panel:user-edit' user_obj.id %}">Edit</a>
+                {% if user_obj != request.user %}
+                  <a href="{% url 'panel:user-delete' user_obj.id %}">Delete</a>
+                {% endif %}
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  {% include "panel/partials/empty_state.html" with title="No users" message="No users match the current filters." %}
+{% endif %}

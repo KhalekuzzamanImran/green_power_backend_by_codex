@@ -45,7 +45,6 @@ class ClientAccessTests(APITestCase):
         returned_codes = {row["code"] for row in response.data}
         self.assertEqual(returned_codes, {"ALLOWED"})
 
-
 class ClientSelfEndpointTests(APITestCase):
     def setUp(self):
         self.client_user = User.objects.create_user(

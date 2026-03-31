@@ -1,0 +1,35 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section panel-section-managed">
+    <div class="panel-section-header">
+      <h2>Device States</h2>
+      {% if request.user.role == "ADMIN" %}
+        <a class="panel-button panel-button-link" href="{% url 'panel:device-state-add' %}">Add Device State</a>
+      {% endif %}
+    </div>
+    {% if device_states %}
+      <table class="panel-table">
+        <thead><tr><th>Name</th><th>Code</th><th>Device</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for state in device_states %}
+            <tr>
+              <td><a href="{% url 'panel:device-state-detail' state.id %}?client_id={{ state.device.client_id }}">{{ state.name }}</a></td>
+              <td>{{ state.code }}</td>
+              <td>{{ state.device.name }}</td>
+              <td>
+                {% if request.user.role == "ADMIN" %}
+                  <div class="panel-actions">
+                    <a href="{% url 'panel:device-state-edit' state.id %}">Edit</a>
+                    <a href="{% url 'panel:device-state-delete' state.id %}">Delete</a>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "panel/partials/empty_state.html" with title="No device states" message="No device states are available for the current filters." %}
+    {% endif %}
+  </section>
+{% endblock %}

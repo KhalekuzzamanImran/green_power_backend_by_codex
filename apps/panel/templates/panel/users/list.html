@@ -1,0 +1,40 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section panel-section-users">
+    <div class="panel-section-header">
+      <h2>Users</h2>
+      {% if request.user.role == "ADMIN" %}
+        <a class="panel-button panel-button-link" href="{% url 'panel:user-add' %}">Add User</a>
+      {% endif %}
+    </div>
+    <form method="get" class="panel-form-grid" data-live-filter-form data-live-filter-target="#users-results" data-live-filter-partial="users-results">
+      <div class="panel-form-row">
+        <label for="user-role-filter">Role</label>
+        <select id="user-role-filter" name="role" data-auto-submit-immediate>
+          <option value="">All roles</option>
+          {% for value, label in role_choices %}
+            <option value="{{ value }}" {% if selected_role == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="panel-form-row">
+        <label for="user-status-filter">Status</label>
+        <select id="user-status-filter" name="status" data-auto-submit-immediate>
+          <option value="">All statuses</option>
+          <option value="active" {% if selected_status == "active" %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
+      <div class="panel-form-row">
+        <label for="user-search-filter">Search</label>
+        <input id="user-search-filter" type="text" name="q" value="{{ search_query }}" placeholder="Search by username, first name, or last name" data-auto-submit-debounce="250">
+      </div>
+      <div class="panel-inline-form-actions">
+        <a class="panel-button panel-button-secondary panel-button-link" href="{% url 'panel:users' %}">Reset</a>
+      </div>
+    </form>
+    <div id="users-results" class="panel-results-region">
+      {% include "panel/users/partials/results.html" %}
+    </div>
+  </section>
+{% endblock %}

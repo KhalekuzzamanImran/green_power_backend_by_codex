@@ -1,0 +1,16 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section">
+    <div class="panel-section-header">
+      <h2>{{ page_heading }}</h2>
+    </div>
+    <p>This action will permanently delete <strong>{{ object }}</strong>.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="panel-inline-form-actions">
+        <button type="submit" class="panel-button">Delete</button>
+        <a class="panel-button panel-button-secondary panel-button-link" href="{{ cancel_url }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

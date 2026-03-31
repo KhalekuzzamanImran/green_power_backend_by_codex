@@ -1,0 +1,35 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section panel-section-managed">
+    <div class="panel-section-header">
+      <h2>Client Types</h2>
+      {% if request.user.role == "ADMIN" %}
+        <a class="panel-button panel-button-link" href="{% url 'panel:client-type-add' %}">Add Client Type</a>
+      {% endif %}
+    </div>
+    {% if client_types %}
+      <table class="panel-table">
+        <thead><tr><th>Name</th><th>Code</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for client_type in client_types %}
+            <tr>
+              <td>{{ client_type.name }}</td>
+              <td>{{ client_type.code }}</td>
+              <td>{% if client_type.is_active %}Active{% else %}Inactive{% endif %}</td>
+              <td>
+                {% if request.user.role == "ADMIN" %}
+                  <div class="panel-actions">
+                    <a href="{% url 'panel:client-type-edit' client_type.id %}">Edit</a>
+                    <a href="{% url 'panel:client-type-delete' client_type.id %}">Delete</a>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "panel/partials/empty_state.html" with title="No client types" message="No client types are available." %}
+    {% endif %}
+  </section>
+{% endblock %}

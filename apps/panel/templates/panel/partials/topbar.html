@@ -1,0 +1,14 @@
+<header class="panel-topbar">
+  <div>
+    <h1 class="panel-page-title">{{ page_heading|default:page_title }}</h1>
+    {% if selected_client %}
+      <p class="panel-page-subtitle">{{ selected_client.site_name }} ({{ selected_client.code }})</p>
+    {% endif %}
+  </div>
+  <div class="panel-topbar-actions">
+    <form method="post" action="{% url 'panel:logout' %}">
+      {% csrf_token %}
+      <button class="panel-button panel-button-secondary" type="submit">Log Out</button>
+    </form>
+  </div>
+</header>

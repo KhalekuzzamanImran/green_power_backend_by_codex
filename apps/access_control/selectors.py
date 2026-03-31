@@ -1,6 +1,6 @@
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from apps.access_control.models import UserClientAccess
+from apps.access_control.models import OMClientAccess, UserClientAccess
 from apps.clients.models import Client
 
 
@@ -36,3 +36,9 @@ def get_selected_client(user, client_id=None, require_selection=False):
 def get_accessible_clients_for_client_user(user):
     client_ids = get_client_accesses(user).values_list("client_id", flat=True)
     return Client.objects.filter(id__in=client_ids).order_by("site_name")
+
+
+def get_accessible_clients_for_om_user(user):
+    queryset = Client.objects.select_related("client_type", "dashboard_scope").order_by("site_name")
+    client_ids = OMClientAccess.objects.filter(om_user=user).values_list("client_id", flat=True)
+    return queryset.filter(id__in=client_ids)

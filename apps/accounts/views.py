@@ -3,15 +3,18 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.accounts.models import User
 from apps.accounts.serializers import MeSerializer, UserCreateSerializer, UserSerializer
-from apps.audit_logs.models import AuditAction, AuditLog
+from apps.audit_logs.mixins import AuditModelViewSetMixin
+from apps.audit_logs.models import AuditAction
+from apps.audit_logs.services import get_action_label, write_audit_log
 from apps.core.permissions import CanManageUsers
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(AuditModelViewSetMixin, viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("username")
     permission_classes = [CanManageUsers]
 
@@ -27,35 +30,27 @@ class UserViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(role=role)
         return queryset
 
-    def perform_create(self, serializer):
-        user = serializer.save()
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.CREATE,
-            target_type="User",
-            target_id=str(user.id),
-            description=f"Created user {user.username}",
-        )
+    def get_audit_description(self, action, instance):
+        return f"{get_action_label(action)} user {instance.username}"
 
-    def perform_update(self, serializer):
-        user = serializer.save()
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.UPDATE,
-            target_type="User",
-            target_id=str(user.id),
-            description=f"Updated user {user.username}",
-        )
 
-    def perform_destroy(self, instance):
-        AuditLog.objects.create(
-            actor=self.request.user,
-            action=AuditAction.DELETE,
+class AuditTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        request = self.context.get("request")
+        write_audit_log(
+            actor=self.user,
+            action=AuditAction.LOGIN,
             target_type="User",
-            target_id=str(instance.id),
-            description=f"Deleted user {instance.username}",
+            target_id=self.user.pk,
+            description=f"User {self.user.username} logged in via API",
+            metadata={
+                "source": "api",
+                "path": request.path if request else "",
+                "method": request.method if request else "",
+            },
         )
-        instance.delete()
+        return data
 
 
 @extend_schema(
@@ -71,6 +66,8 @@ def me_view(request):
 
 
 class DocumentedTokenObtainPairView(TokenObtainPairView):
+    serializer_class = AuditTokenObtainPairSerializer
+
     @extend_schema(
         tags=["Auth"],
         summary="Login and obtain JWT tokens",

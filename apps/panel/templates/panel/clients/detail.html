@@ -1,0 +1,47 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section">
+    <div class="panel-section-header">
+      <h2>{{ client.site_name }}</h2>
+      {% if request.user.role == "ADMIN" %}
+        <div class="panel-actions">
+          <a class="panel-button panel-button-link" href="{% url 'panel:client-edit' client.id %}">Edit Client</a>
+          <a class="panel-button panel-button-secondary panel-button-link" href="{% url 'panel:client-delete' client.id %}">Delete</a>
+        </div>
+      {% endif %}
+    </div>
+    <div class="panel-definition-grid">
+      <div><span>Code</span><strong>{{ client.code }}</strong></div>
+      <div><span>Client Type</span><strong>{{ client.client_type.name }}</strong></div>
+      <div><span>Dashboard Scope</span><strong>{{ client.dashboard_scope.name }}</strong></div>
+      <div><span>Address</span><strong>{{ client.address|default:"-" }}</strong></div>
+    </div>
+  </section>
+  <section class="panel-section">
+    <h2>Installed Devices</h2>
+    {% if devices %}
+      <table class="panel-table">
+        <thead><tr><th>Name</th><th>Serial</th><th>Type</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for device in devices %}
+            <tr>
+              <td><a href="{% url 'panel:device-detail' device.id %}?client_id={{ client.id }}">{{ device.name }}</a></td>
+              <td>{{ device.serial_number }}</td>
+              <td>{{ device.get_device_type_display }}</td>
+              <td>
+                {% if request.user.role == "ADMIN" %}
+                  <div class="panel-actions">
+                    <a href="{% url 'panel:device-edit' device.id %}">Edit</a>
+                    <a href="{% url 'panel:device-delete' device.id %}">Delete</a>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "panel/partials/empty_state.html" with title="No devices" message="This client has no installed devices." %}
+    {% endif %}
+  </section>
+{% endblock %}

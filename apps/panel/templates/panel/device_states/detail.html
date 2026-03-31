@@ -1,0 +1,45 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section">
+    <div class="panel-section-header">
+      <h2>{{ device_state.name }}</h2>
+      {% if request.user.role == "ADMIN" %}
+        <div class="panel-actions">
+          <a class="panel-button panel-button-link" href="{% url 'panel:device-state-edit' device_state.id %}">Edit Device State</a>
+          <a class="panel-button panel-button-secondary panel-button-link" href="{% url 'panel:device-state-delete' device_state.id %}">Delete</a>
+        </div>
+      {% endif %}
+    </div>
+    <div class="panel-definition-grid">
+      <div><span>Code</span><strong>{{ device_state.code }}</strong></div>
+      <div><span>Device</span><strong>{{ device_state.device.name }}</strong></div>
+      <div><span>Description</span><strong>{{ device_state.description|default:"-" }}</strong></div>
+    </div>
+  </section>
+  <section class="panel-section">
+    <h2>Recent Device Data</h2>
+    {% if device_data_rows %}
+      <table class="panel-table">
+        <thead><tr><th>Recorded At</th><th>Payload</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for row in device_data_rows %}
+            <tr>
+              <td>{{ row.recorded_at }}</td>
+              <td>{{ row.payload }}</td>
+              <td>
+                {% if request.user.role == "ADMIN" %}
+                  <div class="panel-actions">
+                    <a href="{% url 'panel:device-data-edit' row.id %}">Edit</a>
+                    <a href="{% url 'panel:device-data-delete' row.id %}">Delete</a>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "panel/partials/empty_state.html" with title="No device data" message="No device data rows exist for this device state." %}
+    {% endif %}
+  </section>
+{% endblock %}

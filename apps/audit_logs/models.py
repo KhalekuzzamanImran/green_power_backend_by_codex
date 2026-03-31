@@ -11,6 +11,7 @@ class AuditAction(models.TextChoices):
     ASSIGN = "ASSIGN", "Assign"
     THRESHOLD_UPDATE = "THRESHOLD_UPDATE", "Threshold Update"
     LOGIN = "LOGIN", "Login"
+    LOGOUT = "LOGOUT", "Logout"
 
 
 class AuditLog(BaseModel):

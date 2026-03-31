@@ -1,0 +1,36 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section panel-section-managed">
+    <div class="panel-section-header">
+      <h2>Thresholds</h2>
+      {% if request.user.role == "ADMIN" %}
+        <a class="panel-button panel-button-link" href="{% url 'panel:threshold-add' %}">Add Threshold</a>
+      {% endif %}
+    </div>
+    {% if thresholds %}
+      <table class="panel-table">
+        <thead><tr><th>Device</th><th>Key</th><th>Value</th><th>Updated By</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for threshold in thresholds %}
+            <tr>
+              <td>{{ threshold.device.name }}</td>
+              <td>{{ threshold.key }}</td>
+              <td>{{ threshold.value }} {{ threshold.unit }}</td>
+              <td>{{ threshold.updated_by|default:"-" }}</td>
+              <td>
+                {% if request.user.role == "ADMIN" %}
+                  <div class="panel-actions">
+                    <a href="{% url 'panel:threshold-edit' threshold.id %}">Edit</a>
+                    <a href="{% url 'panel:threshold-delete' threshold.id %}">Delete</a>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "panel/partials/empty_state.html" with title="No thresholds" message="No thresholds are available for the current scope." %}
+    {% endif %}
+  </section>
+{% endblock %}

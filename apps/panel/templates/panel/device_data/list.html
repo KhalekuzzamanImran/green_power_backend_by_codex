@@ -1,0 +1,36 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section panel-section-managed">
+    <div class="panel-section-header">
+      <h2>Device Data</h2>
+      {% if request.user.role == "ADMIN" %}
+        <a class="panel-button panel-button-link" href="{% url 'panel:device-data-add' %}">Add Device Data</a>
+      {% endif %}
+    </div>
+    {% if rows %}
+      <table class="panel-table">
+        <thead><tr><th>State</th><th>Device</th><th>Recorded At</th><th>Payload</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.topic.code }}</td>
+              <td>{{ row.topic.device.name }}</td>
+              <td>{{ row.recorded_at }}</td>
+              <td>{{ row.payload }}</td>
+              <td>
+                {% if request.user.role == "ADMIN" %}
+                  <div class="panel-actions">
+                    <a href="{% url 'panel:device-data-edit' row.id %}">Edit</a>
+                    <a href="{% url 'panel:device-data-delete' row.id %}">Delete</a>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% include "panel/partials/empty_state.html" with title="No device data" message="No device data rows match the current scope." %}
+    {% endif %}
+  </section>
+{% endblock %}

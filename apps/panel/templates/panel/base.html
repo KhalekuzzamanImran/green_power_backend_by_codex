@@ -1,0 +1,26 @@
+{% load static panel_nav panel_permissions %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title|default:"Panel" }} | Green Power EMS</title>
+  <link rel="stylesheet" href="{% static 'panel/css/panel.css' %}">
+  <link rel="stylesheet" href="{% static 'panel/css/components.css' %}">
+</head>
+<body class="panel-body">
+  <div class="panel-shell">
+    {% include "panel/partials/sidebar.html" %}
+    <div class="panel-main">
+      {% include "panel/partials/topbar.html" %}
+      <main class="panel-content">
+        {% include "panel/partials/breadcrumbs.html" %}
+        {% include "panel/partials/alerts.html" %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  <script src="{% static 'panel/js/panel.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

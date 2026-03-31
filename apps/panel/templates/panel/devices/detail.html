@@ -1,0 +1,62 @@
+{% extends "panel/base.html" %}
+{% block content %}
+  <section class="panel-section">
+    <div class="panel-section-header">
+      <h2>{{ device.name }}</h2>
+      {% if request.user.role == "ADMIN" %}
+        <div class="panel-actions">
+          <a class="panel-button panel-button-link" href="{% url 'panel:device-edit' device.id %}">Edit Device</a>
+          <a class="panel-button panel-button-secondary panel-button-link" href="{% url 'panel:device-delete' device.id %}">Delete</a>
+        </div>
+      {% endif %}
+    </div>
+    <div class="panel-definition-grid">
+      <div><span>Serial</span><strong>{{ device.serial_number }}</strong></div>
+      <div><span>Client</span><strong>{{ device.client.site_name }} ({{ device.client.code }})</strong></div>
+      <div><span>Type</span><strong>{{ device.get_device_type_display }}</strong></div>
+      <div><span>Installed At</span><strong>{{ device.installed_at|default:"-" }}</strong></div>
+    </div>
+  </section>
+  <section class="panel-section panel-grid-two">
+    <div class="panel-subsection">
+      <h2>Device States</h2>
+      {% if states %}
+        <ul class="panel-list">
+          {% for state in states %}
+            <li>
+              <a href="{% url 'panel:device-state-detail' state.id %}?client_id={{ device.client_id }}">{{ state.code }}</a>
+              {% if request.user.role == "ADMIN" %}
+                <span class="panel-actions">
+                  <a href="{% url 'panel:device-state-edit' state.id %}">Edit</a>
+                  <a href="{% url 'panel:device-state-delete' state.id %}">Delete</a>
+                </span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {% include "panel/partials/empty_state.html" with title="No states" message="No device states are available." %}
+      {% endif %}
+    </div>
+    <div class="panel-subsection">
+      <h2>Thresholds</h2>
+      {% if thresholds %}
+        <ul class="panel-list">
+          {% for threshold in thresholds %}
+            <li>
+              {{ threshold.key }} = {{ threshold.value }} {{ threshold.unit }}
+              {% if request.user.role == "ADMIN" %}
+                <span class="panel-actions">
+                  <a href="{% url 'panel:threshold-edit' threshold.id %}">Edit</a>
+                  <a href="{% url 'panel:threshold-delete' threshold.id %}">Delete</a>
+                </span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {% include "panel/partials/empty_state.html" with title="No thresholds" message="No thresholds are configured for this device." %}
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

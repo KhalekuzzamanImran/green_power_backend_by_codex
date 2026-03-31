@@ -3,6 +3,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from apps.core.admin_site import hardened_admin_site
 
 urlpatterns = [
+    path("panel/", include("apps.panel.urls")),
     path('admin/', hardened_admin_site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

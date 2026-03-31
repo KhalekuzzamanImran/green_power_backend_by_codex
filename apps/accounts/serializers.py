@@ -1,7 +1,10 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.access_control.selectors import get_accessible_clients_for_client_user, get_selected_client
+from apps.access_control.selectors import (
+    get_accessible_clients_for_client_user,
+    get_selected_client,
+)
 from apps.accounts.models import User
 from apps.dashboards.models import Dashboard
 
